@@ -8,6 +8,7 @@ This page will be used in future to trouble shoot and check what I have covered 
 
 I am fully new to the homelabbing community, so I will try test out and learn as much as I can to get to a professional level.
 
+
 # Session 1
 
 I began by installing `proxmox` on an `elitedesk 800 g2 mini` and configuering all the settings. 
@@ -19,4 +20,46 @@ After connecting to the proxmox web app i used the shell to navigate to `/etc/ne
 After doing so, I reset the tp-link extender settings.
 
 After doing that I was finally able to connect to proxmox through the web app without any issue.
+
+
+# Session 2
+
+After setting up proxmox I wanted to create a VM dedicated for `Wireguard`. I initialised on with the following specs: 
+  - Debian 12.9.0
+  - 1 core CPU
+  - 512mb RAM
+  - 10gb storage
+
+I kept the resources extremely low since there won't be much traffic in the vpn server and I prefer saving the resources for other VMs.
+First issue arised when setting up debian, for some reason `/etc/resolv.conf` didn't have `nameserver 1.1.1.1` and `nameserver 8.8.8.8`, making it impossible connecting to the dns servers. This interfered with the debian installation and also blocked me from accessing web pages afterward.
+
+Even after modifying `/etc/resolv.conf`, it kept removing cloudflare and google dns servers for some reason. To fix that I re-added them and ran `sudo chattr +i /etc/resolv.conf` to prevent it to be overwritten (**not sure if it's the best practice, might need to look more into it**)
+
+After finishing setting up debian, I started setting up wireguard. 
+The workflow was pretty straightforward: 
+  - apt update && apt upgrade -y
+  - apt install wireguard -y
+  - wg genkey | tee /etc/wireguard/privatekey | wg pubkey > /etc/wireguard/publickey
+  - cat /etc/wireguard/privatekey # Save it somewhere
+  - cat /etc/wireguard/publickey # Save it somewhere
+  - nano /etc/wireguard/wg0.conf # Type the folloing inside
+      ` [Interface]
+        PrivateKey = <PRIVATE_KEY>
+        Address = 10.0.0.1/24
+        ListenPort = 51820
+        SaveConfig = true
+        [Peer]
+        PublicKey = <CLIENT_PUBLIC_KEY>
+        AllowedIPs = 10.0.0.2/32
+        `
+
+This part worked smoothly, but going to the next command, sysctl was not installed and I had to configure it. I installed sysctl by installing procps but for some reason `/usr/sbin` was not included to PATH, making it impossible to locate the package. To fix it and continue with wireguard installation I ran:
+  - apt install procps -y
+  - echo 'export PATH=$PATH:/usr/sbin' >> ~/.bashrc
+  - source ~/.bashrc # To add /usr/sbin to PATH
+  - sysctl --version
+  - sysctl net.ipv4.ip_forward
+  - nano /etc/sysctl.conf # Type the following inside
+         `net.ipv4.ip_forward=1`
+  - sysctl -p
 
