@@ -1,0 +1,15 @@
+#!/bin/bash
+# Validate commit message format
+
+commit_regex='^(infra|config|deploy|monitoring|security|backup|feat|fix|script|test|ci|automation|docs|refactor|update|cleanup|style)(\(.+\))?: .{1,50}'
+
+error_msg="Invalid commit message format. Use: <type>[optional scope]: <description>
+
+Allowed types: infra, config, deploy, monitoring, security, backup, feat, fix, script, test, ci, automation, docs, refactor, update, cleanup, style
+
+Example: infra: add homelab network configuration"
+
+if ! grep -qE "$commit_regex" "$1"; then
+    echo "$error_msg" >&2
+    exit 1
+fi

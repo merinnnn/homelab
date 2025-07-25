@@ -1,0 +1,36 @@
+# Secrets and sensitive data
+*.key
+*.pem
+*.crt
+secrets/
+.env
+passwords.txt
+
+# Temporary files
+*.tmp
+*.log
+*.backup
+.DS_Store
+Thumbs.db
+
+# VM and backup files
+*.vmdk
+*.qcow2
+*.vdi
+backups/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

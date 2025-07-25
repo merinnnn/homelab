@@ -1,0 +1,18 @@
+# <type>[optional scope]: <description>
+# 
+# Types: infra, config, deploy, monitoring, security, backup,
+#        feat, fix, script, test, ci, automation,
+#        docs, refactor, update, cleanup, style
+#
+# Examples:
+# infra: add new VM for database services
+# config(nginx): update reverse proxy configuration
+# deploy(docker): add new monitoring stack
+# docs: update network architecture documentation
+# fix(dns): resolve pihole configuration issue
+
+# Body (optional - explain what and why):
+
+# Footer (optional - reference issues):
+# Fixes: #123
+# Related: #456
