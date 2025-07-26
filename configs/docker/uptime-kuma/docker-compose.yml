@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=Europe/London
+      - UPTIME_KUMA_PORT=3001
+    labels:
+      - "homelab.service=uptime-kuma"
+      - "homelab.description=Service monitoring and alerting"
+      - "homelab.url=http://10.0.10.20:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  uptime-kuma-data:
+    driver: local
