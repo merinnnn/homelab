@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    environment:
+      - TZ=Europe/London
+    labels:
+      - "homelab.service=portainer"
+      - "homelab.description=Docker container management"
+      - "homelab.url=http://10.0.10.20:9000"
+
+volumes:
+  portainer_data:
+    driver: local
