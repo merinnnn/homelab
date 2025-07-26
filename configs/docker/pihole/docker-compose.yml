@@ -1,0 +1,35 @@
+# Note: Current setup is VM-based
+version: '3.8'
+
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
+    environment:
+      TZ: 'Europe/London'
+      WEBPASSWORD: '<MY_WEBPASSWORD>'  
+      PIHOLE_DNS_: '8.8.8.8;1.1.1.1'
+      DNSMASQ_LISTENING: 'all'
+      VIRTUAL_HOST: 'pihole.homelab.local'
+    volumes:
+      - './etc-pihole:/etc/pihole'
+      - './etc-dnsmasq.d:/etc/dnsmasq.d'
+    dns:
+      - 127.0.0.1
+      - 8.8.8.8
+    cap_add:
+      - NET_ADMIN
+    labels:
+      - "homelab.service=pihole"
+      - "homelab.description=DNS filtering and ad blocking"
+      - "homelab.url=http://10.0.10.10/admin"
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "cloudflare.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
