@@ -1,0 +1,78 @@
+name: Homelab Configuration Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-configs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Validate shell scripts
+      run: |
+        echo "🔍 Validating shell scripts..."
+        find . -name "*.sh" -type f | while read script; do
+          echo "Checking: $script"
+          bash -n "$script" || exit 1
+        done
+        echo "✅ All shell scripts are syntactically valid"
+    
+    - name: Validate Docker Compose files
+      run: |
+        echo "🐳 Validating Docker Compose files..."
+        find configs/docker -name "docker-compose.yml" -type f | while read compose_file; do
+          echo "Validating: $compose_file"
+          docker-compose -f "$compose_file" config > /dev/null || exit 1
+        done
+        echo "✅ All Docker Compose files are valid"
+    
+    - name: Check for secrets in configs
+      run: |
+        echo "🔒 Checking for potential secrets..."
+        if grep -r -i "password.*=" configs/ --include="*.yml" --include="*.yaml" | grep -v "placeholder\|example\|template\|changeme"; then
+          echo "❌ Potential hardcoded secrets found!"
+          exit 1
+        else
+          echo "✅ No hardcoded secrets found"
+        fi
+    
+    - name: Validate network configuration
+      run: |
+        echo "🌐 Validating network configuration..."
+        # Check if network ranges are consistent
+        if grep -q "10.0.10.0/24" configs/proxmox/network-interfaces.template && \
+           grep -q "10.0.10.1" configs/proxmox/network-interfaces.template; then
+          echo "✅ Network configuration is consistent"
+        else
+          echo "❌ Network configuration inconsistency found"
+          exit 1
+        fi
+
+  test-connectivity:
+    runs-on: ubuntu-latest
+    needs: validate-configs
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y dnsutils netcat-openbsd curl
+    
+    - name: Run connectivity tests (dry run)
+      run: |
+        echo "🧪 Running connectivity tests in dry-run mode..."
+        # We can't actually test the homelab from GitHub Actions,
+        # but we can verify the test scripts are executable
+        chmod +x tests/*.sh
+        bash -n tests/network-connectivity.sh
+        bash -n tests/service-health.sh
+        echo "✅ Test scripts are valid"
