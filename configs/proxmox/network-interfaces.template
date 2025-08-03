@@ -1,0 +1,28 @@
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+# Main network interface (connected to WiFi extender)
+auto vmbr0
+iface vmbr0 inet dhcp
+        bridge-ports enp0s3
+        bridge-stp off
+        bridge-fd 0
+        # Uncomment if you want static IP instead of DHCP
+        # address YOUR_STATIC_IP/24
+        # gateway YOUR_GATEWAY_IP
+
+# Homelab internal network bridge
+auto vmbr1
+iface vmbr1 inet static
+        address 10.0.10.1/24
+        bridge-ports none
+        bridge-stp off
+        bridge-fd 0
+        # Enable IP forwarding and NAT for internet access
+        post-up echo 1 > /proc/sys/net/ipv4/ip_forward
+        post-up iptables -t nat -A POSTROUTING -s '10.0.10.0/24' -o vmbr0 -j MASQUERADE
+        post-down iptables -t nat -D POSTROUTING -s '10.0.10.0/24' -o vmbr0 -j MASQUERADE
+        
