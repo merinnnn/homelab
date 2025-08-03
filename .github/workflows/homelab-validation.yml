@@ -28,7 +28,7 @@ jobs:
         echo "🐳 Validating Docker Compose files..."
         find configs/docker -name "docker-compose.yml" -type f | while read compose_file; do
           echo "Validating: $compose_file"
-          docker-compose -f "$compose_file" config > /dev/null || exit 1
+          docker compose -f "$compose_file" config > /dev/null || exit 1
         done
         echo "✅ All Docker Compose files are valid"
     
