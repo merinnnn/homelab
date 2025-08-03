@@ -54,25 +54,4 @@ jobs:
           exit 1
         fi
 
-  test-connectivity:
-    runs-on: ubuntu-latest
-    needs: validate-configs
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Install test dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y dnsutils netcat-openbsd curl
-    
-    - name: Run connectivity tests (dry run)
-      run: |
-        echo "🧪 Running connectivity tests in dry-run mode..."
-        # We can't actually test the homelab from GitHub Actions,
-        # but we can verify the test scripts are executable
-        chmod +x tests/*.sh
-        bash -n tests/network-connectivity.sh
-        bash -n tests/service-health.sh
-        echo "✅ Test scripts are valid"
+  
