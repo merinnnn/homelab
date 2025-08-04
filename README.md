@@ -117,8 +117,7 @@ Planned:
 
 ## 🔄 Backup & Recovery
 
-- Daily VM snapshot backups using `vzdump`
-- Scripts for automating backup (`scripts/proxmox/backup-vms.sh`)
+- Daily VM snapshot backups using `vzdump`S
 
 ---
 
