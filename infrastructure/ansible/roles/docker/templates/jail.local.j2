@@ -1,0 +1,20 @@
+[DEFAULT]
+# Ban time in seconds (10 minutes)
+bantime = 600
+
+# Find time in seconds (10 minutes)
+findtime = 600
+
+# Max retry attempts
+maxretry = 5
+
+# Backend
+backend = auto
+
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 3600

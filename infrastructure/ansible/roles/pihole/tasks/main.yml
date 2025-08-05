@@ -1,0 +1,73 @@
+- name: Install Pi-hole dependencies
+  apt:
+    name:
+      - curl
+      - dnsutils
+      - net-tools
+      - lighttpd
+      - php-cgi
+      - php-sqlite3
+      - sqlite3
+      - python3-pip
+    state: present
+
+- name: Configure UFW for Pi-hole
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: "{{ 'tcp' if item == '80' else 'any' }}"
+  loop:
+    - "80"
+    - "53"
+  when: security.ufw_enabled
+
+- name: Create Pi-hole configuration directory
+  file:
+    path: /etc/pihole
+    state: directory
+    mode: '0755'
+
+- name: Configure Pi-hole setupVars
+  template:
+    src: setupVars.conf.j2
+    dest: /etc/pihole/setupVars.conf
+    mode: '0644'
+  notify: restart pihole-FTL
+
+- name: Check if Pi-hole is already installed
+  stat:
+    path: /usr/local/bin/pihole
+  register: pihole_installed
+
+- name: Download and install Pi-hole
+  shell: |
+    curl -sSL https://install.pi-hole.net | PIHOLE_SKIP_OS_CHECK=true bash /dev/stdin --unattended
+  args:
+    creates: /usr/local/bin/pihole
+  when: not pihole_installed.stat.exists
+
+- name: Set Pi-hole web interface password
+  shell: "pihole -a -p {{ pihole_password }}"
+  when: pihole_password is defined and pihole_password != ""
+
+- name: Configure Pi-hole to use custom DNS upstream
+  lineinfile:
+    path: /etc/pihole/setupVars.conf
+    regexp: '^PIHOLE_DNS_'
+    line: "PIHOLE_DNS_1={{ dns_servers[0] }}"
+  notify: restart pihole-FTL
+
+- name: Enable and start Pi-hole services
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop:
+    - pihole-FTL
+    - lighttpd
+
+- name: Configure Pi-hole log rotation
+  template:
+    src: pihole-logrotate.j2
+    dest: /etc/logrotate.d/pihole
+    mode: '0644'

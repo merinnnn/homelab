@@ -1,0 +1,9 @@
+- name: restart pihole-FTL
+  service:
+    name: pihole-FTL
+    state: restarted
+
+- name: restart lighttpd
+  service:
+    name: lighttpd
+    state: restarted

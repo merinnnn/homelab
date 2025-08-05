@@ -1,0 +1,38 @@
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Proxmox Connection (Required)
+proxmox_host = "192.168.1.100"  # Your Proxmox server IP
+target_node  = "pve"            # Your Proxmox node name
+
+# Authentication Method 1: API Token (Recommended - More Secure)
+proxmox_api_token_id     = "terraform@pve!terraform-token"
+proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Authentication Method 2: Username/Password (Alternative)
+# proxmox_user     = "terraform@pve"
+# proxmox_password = "your-password"
+
+# VM Configuration (Required)
+vm_password = "homelab123"  # Password for the homelab user on VMs
+
+# Network Configuration (Optional - defaults shown)
+homelab_gateway  = "10.0.10.1"
+pihole_ip       = "10.0.10.11"
+docker_host_ip  = "10.0.10.21"
+dns_servers     = ["8.8.8.8", "1.1.1.1"]
+search_domain   = "homelab.local"
+
+# VM Resources (Optional - defaults shown)
+pihole_vmid  = 901
+docker_vmid  = 902
+
+# Infrastructure Settings (Optional - defaults shown) 
+storage_name    = "local-lvm"
+template_name   = "ubuntu-22.04-template"
+vm_user         = "homelab"
+environment     = "homelab"
+project_name    = "homelab-infrastructure"
+
+# SSH Configuration (Optional - defaults shown)
+ssh_public_key_path  = "~/.ssh/id_rsa.pub"
+ssh_private_key_path = "~/.ssh/id_rsa"

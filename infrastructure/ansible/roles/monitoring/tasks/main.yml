@@ -1,0 +1,48 @@
+- name: Install monitoring tools
+  apt:
+    name:
+      - htop
+      - iotop
+      - nethogs
+      - tcpdump
+      - nmap
+      - speedtest-cli
+    state: present
+
+- name: Create monitoring scripts directory
+  file:
+    path: "/home/{{ homelab_user }}/homelab/monitoring"
+    state: directory
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+
+- name: Deploy system monitoring script
+  template:
+    src: system-monitor.sh.j2
+    dest: "/home/{{ homelab_user }}/homelab/monitoring/system-monitor.sh"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+
+- name: Deploy service health check script
+  template:
+    src: service-health.sh.j2
+    dest: "/home/{{ homelab_user }}/homelab/monitoring/service-health.sh"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+
+- name: Setup monitoring cron jobs
+  cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute }}"
+    job: "{{ item.job }}"
+    user: "{{ homelab_user }}"
+  loop:
+    - name: "System resource monitoring"
+      minute: "*/5"
+      job: "/home/{{ homelab_user }}/homelab/monitoring/system-monitor.sh >> /home/{{ homelab_user }}/homelab/logs/system.log 2>&1"
+    - name: "Service health monitoring"
+      minute: "*/10"
+      job: "/home/{{ homelab_user }}/homelab/monitoring/service-health.sh >> /home/{{ homelab_user }}/homelab/logs/services.log 2>&1"

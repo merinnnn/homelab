@@ -1,0 +1,11 @@
+{
+  "log-driver": "{{ docker.daemon_options['log-driver'] }}",
+  "log-opts": {{ docker.daemon_options['log-opts'] | to_json }},
+  "storage-driver": "overlay2",
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "live-restore": true,
+  "userland-proxy": false,
+  "experimental": false,
+  "metrics-addr": "127.0.0.1:9323",
+  "hosts": ["unix:///var/run/docker.sock"]
+}

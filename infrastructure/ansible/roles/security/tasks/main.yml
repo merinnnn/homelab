@@ -1,0 +1,90 @@
+- name: Configure SSH security
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  loop:
+    - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication {{ "no" if security.ssh_disable_password_auth else "yes" }}' }
+    - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+    - { regexp: '^#?AuthorizedKeysFile', line: 'AuthorizedKeysFile .ssh/authorized_keys' }
+  notify: restart ssh
+
+- name: Install and configure UFW firewall
+  block:
+    - name: Install UFW
+      apt:
+        name: ufw
+        state: present
+    
+    - name: Reset UFW to defaults
+      ufw:
+        state: reset
+      when: security.ufw_enabled
+    
+    - name: Configure UFW defaults
+      ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: 'incoming', policy: 'deny' }
+        - { direction: 'outgoing', policy: 'allow' }
+      when: security.ufw_enabled
+    
+    - name: Allow SSH through UFW
+      ufw:
+        rule: allow
+        name: OpenSSH
+      when: security.ufw_enabled
+    
+    - name: Enable UFW
+      ufw:
+        state: enabled
+      when: security.ufw_enabled
+
+- name: Configure automatic security updates
+  block:
+    - name: Install unattended upgrades
+      apt:
+        name: unattended-upgrades
+        state: present
+    
+    - name: Configure unattended upgrades
+      template:
+        src: 50unattended-upgrades.j2
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades
+        backup: yes
+      when: security.auto_updates_enabled
+    
+    - name: Enable automatic updates
+      lineinfile:
+        path: /etc/apt/apt.conf.d/20auto-upgrades
+        create: yes
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      loop:
+        - { regexp: '^APT::Periodic::Update-Package-Lists', line: 'APT::Periodic::Update-Package-Lists "1";' }
+        - { regexp: '^APT::Periodic::Unattended-Upgrade', line: 'APT::Periodic::Unattended-Upgrade "1";' }
+      when: security.auto_updates_enabled
+
+- name: Install and configure Fail2Ban
+  block:
+    - name: Install Fail2Ban
+      apt:
+        name: fail2ban
+        state: present
+    
+    - name: Configure Fail2Ban for SSH
+      template:
+        src: jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        backup: yes
+      notify: restart fail2ban
+    
+    - name: Start and enable Fail2Ban
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
+  when: security.fail2ban_enabled

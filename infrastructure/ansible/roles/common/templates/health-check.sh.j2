@@ -1,0 +1,32 @@
+#!/bin/bash
+# Basic health check script for homelab hosts
+
+HOSTNAME=$(hostname)
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "[$TIMESTAMP] Health check for $HOSTNAME"
+echo "======================================"
+
+# System load
+echo "System Load: $(uptime | awk '{print $10, $11, $12}')"
+
+# Memory usage
+echo "Memory Usage: $(free -h | grep '^Mem:' | awk '{print $3 "/" $2 " (" $3/$2*100 "%)"}')"
+
+# Disk usage
+echo "Disk Usage: $(df -h / | tail -1 | awk '{print $3 "/" $2 " (" $5 ")"}')"
+
+# Network connectivity
+if ping -c 1 {{ homelab_gateway }} &> /dev/null; then
+    echo "Gateway: OK"
+else
+    echo "Gateway: FAILED"
+fi
+
+if ping -c 1 8.8.8.8 &> /dev/null; then
+    echo "Internet: OK"
+else
+    echo "Internet: FAILED"
+fi
+
+echo ""

@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  uptime-kuma:
+    image: {{ services.uptime_kuma.image }}
+    container_name: uptime-kuma
+    restart: {{ services.uptime_kuma.restart_policy }}
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - uptime-kuma-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "{{ services.uptime_kuma.port }}:3001"
+    environment:
+      - TZ={{ timezone }}
+      - UPTIME_KUMA_PORT=3001
+    labels:
+      - "homelab.service=uptime-kuma"
+      - "homelab.description=Service monitoring and alerting"
+      - "homelab.url=http://{{ ansible_default_ipv4.address }}:{{ services.uptime_kuma.port }}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  uptime-kuma-data:
+    driver: local
