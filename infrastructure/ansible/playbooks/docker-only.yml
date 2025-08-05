@@ -1,0 +1,20 @@
+- name: Configure Docker Hosts Only
+  hosts: docker_hosts
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: Wait for system to become reachable
+      wait_for_connection:
+        timeout: 300
+    
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+  roles:
+    - common
+    - security
+    - docker
+    - monitoring

@@ -1,0 +1,44 @@
+# Common variables for all homelab hosts
+homelab_user: homelab
+timezone: "Europe/London"
+
+# Network configuration
+homelab_network: "10.0.10.0/24"
+homelab_gateway: "10.0.10.1"
+dns_servers:
+  - "8.8.8.8"
+  - "1.1.1.1"
+
+# Service configurations
+services:
+  portainer:
+    port: 9000
+    image: "portainer/portainer-ce:latest"
+    restart_policy: "unless-stopped"
+  uptime_kuma:
+    port: 3001
+    image: "louislam/uptime-kuma:1"
+    restart_policy: "unless-stopped"
+  pihole:
+    web_port: 80
+    dns_port: 53
+    image: "pihole/pihole:latest"
+
+# Security settings
+security:
+  ssh_disable_password_auth: true
+  ufw_enabled: true
+  fail2ban_enabled: true
+  auto_updates_enabled: true
+
+# Docker configuration
+docker:
+  version: "latest"
+  compose_version: "v2.21.0"
+  users:
+    - "{{ homelab_user }}"
+  daemon_options:
+    log-driver: "json-file"
+    log-opts:
+      max-size: "10m"
+      max-file: "3"
