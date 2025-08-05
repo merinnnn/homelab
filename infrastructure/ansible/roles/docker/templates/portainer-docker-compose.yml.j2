@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  portainer:
+    image: {{ services.portainer.image }}
+    container_name: portainer
+    restart: {{ services.portainer.restart_policy }}
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "{{ services.portainer.port }}:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer_data:/data
+    environment:
+      - TZ={{ timezone }}
+    labels:
+      - "homelab.service=portainer"
+      - "homelab.description=Docker container management"
+      - "homelab.url=http://{{ ansible_default_ipv4.address }}:{{ services.portainer.port }}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  portainer_data:
+    driver: local
