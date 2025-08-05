@@ -1,0 +1,113 @@
+- name: Remove old Docker packages
+  apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+
+- name: Install Docker dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+    keyring: /usr/share/keyrings/docker-archive-keyring.gpg
+
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: Install Docker packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Configure Docker daemon
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    backup: yes
+  notify: restart docker
+
+- name: Add users to docker group
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  loop: "{{ docker.users }}"
+
+- name: Start and enable Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Configure UFW for Docker services
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "9000"  # Portainer
+    - "3001"  # Uptime Kuma
+  when: security.ufw_enabled
+
+- name: Create homelab directory structure for Docker
+  file:
+    path: "/home/{{ homelab_user }}/homelab/{{ item }}"
+    state: directory
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+  loop:
+    - portainer
+    - uptime-kuma
+    - monitoring
+    - nginx-proxy-manager
+    - data/portainer
+    - data/uptime-kuma
+
+- name: Deploy Portainer docker-compose
+  template:
+    src: portainer-docker-compose.yml.j2
+    dest: "/home/{{ homelab_user }}/homelab/portainer/docker-compose.yml"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0644'
+  notify: restart portainer
+
+- name: Deploy Uptime Kuma docker-compose
+  template:
+    src: uptime-kuma-docker-compose.yml.j2
+    dest: "/home/{{ homelab_user }}/homelab/uptime-kuma/docker-compose.yml"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0644'
+  notify: restart uptime-kuma
+
+- name: Start Docker services
+  community.docker.docker_compose:
+    project_src: "/home/{{ homelab_user }}/homelab/{{ item }}"
+    state: present
+  become_user: "{{ homelab_user }}"
+  loop:
+    - portainer
+    - uptime-kuma

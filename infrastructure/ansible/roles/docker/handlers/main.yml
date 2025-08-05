@@ -1,0 +1,16 @@
+- name: restart docker
+  service:
+    name: docker
+    state: restarted
+
+- name: restart portainer
+  community.docker.docker_compose:
+    project_src: "/home/{{ homelab_user }}/homelab/portainer"
+    restarted: yes
+  become_user: "{{ homelab_user }}"
+
+- name: restart uptime-kuma
+  community.docker.docker_compose:
+    project_src: "/home/{{ homelab_user }}/homelab/uptime-kuma"
+    restarted: yes
+  become_user: "{{ homelab_user }}"

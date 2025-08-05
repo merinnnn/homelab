@@ -1,0 +1,63 @@
+- name: Install common packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - htop
+      - neofetch
+      - unzip
+      - software-properties-common
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - vim
+      - tree
+      - jq
+      - net-tools
+      - dnsutils
+      - python3-pip
+      - python3-setuptools
+    state: present
+    update_cache: yes
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+  notify: restart rsyslog
+
+- name: Configure SSH for homelab user
+  authorized_key:
+    user: "{{ homelab_user }}"
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    state: present
+
+- name: Create homelab directory structure
+  file:
+    path: "/home/{{ homelab_user }}/homelab/{{ item }}"
+    state: directory
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+  loop:
+    - configs
+    - scripts
+    - logs
+    - backups
+    - data
+
+- name: Install monitoring script
+  template:
+    src: health-check.sh.j2
+    dest: "/home/{{ homelab_user }}/homelab/scripts/health-check.sh"
+    mode: '0755'
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+
+- name: Setup cron job for health checks
+  cron:
+    name: "Homelab health check"
+    minute: "*/15"
+    job: "/home/{{ homelab_user }}/homelab/scripts/health-check.sh >> /home/{{ homelab_user }}/homelab/logs/health.log 2>&1"
+    user: "{{ homelab_user }}"
