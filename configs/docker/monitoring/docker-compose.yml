@@ -1,0 +1,173 @@
+version: '3.8'
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+
+services:
+  # Prometheus - Metrics Database
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./config/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--alertmanager.url=http://alertmanager:9093'
+    networks:
+      - monitoring
+    mem_limit: 512m
+    cpus: 0.8
+    labels:
+      - "homelab.service=prometheus"
+      - "homelab.description=Metrics database and monitoring"
+      - "homelab.url=http://10.0.10.20:9090"
+
+  # Grafana - Visualization Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=changeThisPassword123!
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel,grafana-worldmap-panel
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/homelab-overview.json
+      - TZ=Europe/London
+    networks:
+      - monitoring
+    mem_limit: 256m
+    cpus: 0.4
+    depends_on:
+      - prometheus
+    labels:
+      - "homelab.service=grafana"
+      - "homelab.description=Metrics visualization and dashboards"
+      - "homelab.url=http://10.0.10.20:3000"
+
+  # Node Exporter - System Metrics (Docker Host)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.systemd'
+      - '--collector.processes'
+    networks:
+      - monitoring
+    mem_limit: 64m
+    cpus: 0.1
+    labels:
+      - "homelab.service=node-exporter"
+      - "homelab.description=System metrics exporter"
+
+  # cAdvisor - Container Metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    ports:
+      - "8081:8080"  # Changed from 8080 to avoid Pi-hole conflict
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    networks:
+      - monitoring
+    mem_limit: 128m
+    cpus: 0.3
+    privileged: true
+    labels:
+      - "homelab.service=cadvisor"
+      - "homelab.description=Container metrics and monitoring"
+      - "homelab.url=http://10.0.10.20:8081"
+
+  # Pi-hole Exporter - DNS Metrics
+  pihole-exporter:
+    image: ekofr/pihole-exporter:latest
+    container_name: pihole-exporter
+    restart: unless-stopped
+    ports:
+      - "9617:9617"
+    environment:
+      - PIHOLE_HOSTNAME=10.0.10.10
+      - PIHOLE_PORT=80
+      - INTERVAL=30s
+    networks:
+      - monitoring
+    mem_limit: 32m
+    cpus: 0.1
+    labels:
+      - "homelab.service=pihole-exporter"
+      - "homelab.description=Pi-hole DNS metrics exporter"
+
+  # Blackbox Exporter - Service Health Checks
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./config/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    networks:
+      - monitoring
+    mem_limit: 64m
+    cpus: 0.1
+    labels:
+      - "homelab.service=blackbox-exporter"
+      - "homelab.description=Service health check exporter"
+
+  # Alertmanager - Alert Handling
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - monitoring
+    mem_limit: 64m
+    cpus: 0.1
+    labels:
+      - "homelab.service=alertmanager"
+      - "homelab.description=Alert management and notifications"
+      - "homelab.url=http://10.0.10.20:9093"

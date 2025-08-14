@@ -1,0 +1,312 @@
+groups:
+- name: homelab_critical_system
+  interval: 30s
+  rules:
+  # System Resource Alerts
+  - alert: HighCPUUsage
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+    for: 5m
+    labels:
+      severity: warning
+      service: system
+      category: performance
+    annotations:
+      summary: "High CPU usage on {{ $labels.instance }}"
+      description: "CPU usage is {{ $value | humanize }}% on {{ $labels.instance }} ({{ $labels.location }})"
+      dashboard: "http://grafana:3000/d/node-exporter"
+      runbook: "Check running processes and system load"
+
+  - alert: CriticalCPUUsage
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+    for: 2m
+    labels:
+      severity: critical
+      service: system
+      category: performance
+    annotations:
+      summary: "Critical CPU usage on {{ $labels.instance }}"
+      description: "CPU usage is {{ $value | humanize }}% on {{ $labels.instance }} - immediate attention required"
+
+  - alert: HighMemoryUsage
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+      service: system
+      category: memory
+    annotations:
+      summary: "High memory usage on {{ $labels.instance }}"
+      description: "Memory usage is {{ $value | humanize }}% on {{ $labels.instance }}"
+
+  - alert: CriticalMemoryUsage
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 95
+    for: 2m
+    labels:
+      severity: critical
+      service: system
+      category: memory
+    annotations:
+      summary: "Critical memory usage on {{ $labels.instance }}"
+      description: "Memory usage is {{ $value | humanize }}% on {{ $labels.instance }} - system may become unresponsive"
+
+  - alert: LowDiskSpace
+    expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+    for: 5m
+    labels:
+      severity: warning
+      service: system
+      category: storage
+    annotations:
+      summary: "Low disk space on {{ $labels.instance }}"
+      description: "Only {{ $value | humanize }}% disk space remaining on {{ $labels.instance }}"
+
+  - alert: CriticalDiskSpace
+    expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+    for: 1m
+    labels:
+      severity: critical
+      service: system
+      category: storage
+    annotations:
+      summary: "Critical disk space on {{ $labels.instance }}"
+      description: "Only {{ $value | humanize }}% disk space remaining on {{ $labels.instance }} - cleanup required immediately"
+
+  - alert: SystemLoadHigh
+    expr: node_load15 / count(node_cpu_seconds_total{mode="idle"}) by (instance) > 2
+    for: 10m
+    labels:
+      severity: warning
+      service: system
+      category: performance
+    annotations:
+      summary: "High system load on {{ $labels.instance }}"
+      description: "15-minute load average is {{ $value | humanize }} on {{ $labels.instance }}"
+
+- name: homelab_containers
+  interval: 30s
+  rules:
+  # Container Alerts
+  - alert: ContainerDown
+    expr: up{job="docker-containers"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: containers
+      category: availability
+    annotations:
+      summary: "Container monitoring unavailable"
+      description: "cAdvisor is not responding - cannot monitor Docker containers"
+
+  - alert: ContainerHighMemory
+    expr: (container_memory_usage_bytes{name!="",name!~".*exporter.*"} / container_spec_memory_limit_bytes) * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+      service: containers
+      category: memory
+    annotations:
+      summary: "Container {{ $labels.name }} high memory usage"
+      description: "Container {{ $labels.name }} memory usage is {{ $value | humanize }}%"
+
+  - alert: ContainerCriticalMemory
+    expr: (container_memory_usage_bytes{name!="",name!~".*exporter.*"} / container_spec_memory_limit_bytes) * 100 > 95
+    for: 2m
+    labels:
+      severity: critical
+      service: containers
+      category: memory
+    annotations:
+      summary: "Container {{ $labels.name }} critical memory usage"
+      description: "Container {{ $labels.name }} memory usage is {{ $value | humanize }}% - may crash"
+
+  - alert: ContainerRestarting
+    expr: increase(container_start_time_seconds{name!="",name!~".*exporter.*"}[10m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+      service: containers
+      category: stability
+    annotations:
+      summary: "Container {{ $labels.name }} restarted"
+      description: "Container {{ $labels.name }} has restarted - check logs for issues"
+
+- name: homelab_services
+  interval: 30s
+  rules:
+  # Core Service Alerts
+  - alert: ServiceDown
+    expr: up{job!~".*exporter.*|prometheus|network.*|dns.*"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: core
+      category: availability
+    annotations:
+      summary: "Service {{ $labels.job }} unavailable"
+      description: "{{ $labels.job }} on {{ $labels.instance }} has been down for more than 2 minutes"
+
+  - alert: MonitoringDown
+    expr: up{job=~".*exporter.*|prometheus"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      service: monitoring
+      category: availability
+    annotations:
+      summary: "Monitoring service {{ $labels.job }} down"
+      description: "Critical monitoring component {{ $labels.job }} is unavailable"
+
+  # HTTP Service Health
+  - alert: WebServiceUnresponsive
+    expr: probe_success{job="service-health-http"} == 0
+    for: 3m
+    labels:
+      severity: warning
+      service: web
+      category: availability
+    annotations:
+      summary: "Web service {{ $labels.instance }} unresponsive"
+      description: "HTTP probe failed for {{ $labels.instance }}"
+
+  - alert: WebServiceSlowResponse
+    expr: probe_duration_seconds{job="service-health-http"} > 5
+    for: 5m
+    labels:
+      severity: warning
+      service: web
+      category: performance
+    annotations:
+      summary: "Web service {{ $labels.instance }} slow response"
+      description: "{{ $labels.instance }} responding in {{ $value | humanize }}s (>5s threshold)"
+
+- name: homelab_pihole
+  interval: 30s
+  rules:
+  # Pi-hole Specific Alerts
+  - alert: PiholeDown
+    expr: up{job="pihole-dns"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      service: dns
+      category: availability
+    annotations:
+      summary: "Pi-hole DNS service unavailable"
+      description: "Cannot collect Pi-hole metrics - DNS filtering may be down"
+
+  - alert: PiholeHighQueryRate
+    expr: rate(pihole_queries_today[5m]) * 60 > 500
+    for: 10m
+    labels:
+      severity: info
+      service: dns
+      category: performance
+    annotations:
+      summary: "Pi-hole high query rate"
+      description: "Pi-hole processing {{ $value | humanize }} queries per minute"
+
+  - alert: PiholeLowBlockingRate
+    expr: (pihole_ads_blocked_today / pihole_queries_today) * 100 < 10
+    for: 30m
+    labels:
+      severity: warning
+      service: dns
+      category: security
+    annotations:
+      summary: "Pi-hole low blocking rate"
+      description: "Pi-hole blocking only {{ $value | humanize }}% of queries - check blocklists"
+
+  - alert: PiholeSystemResourceHigh
+    expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{instance="pihole-vm",mode="idle"}[5m])) * 100) > 70
+    for: 10m
+    labels:
+      severity: warning
+      service: dns
+      category: performance
+    annotations:
+      summary: "Pi-hole VM high resource usage"
+      description: "Pi-hole VM CPU usage is {{ $value | humanize }}%"
+
+- name: homelab_network
+  interval: 30s
+  rules:
+  # Network Connectivity
+  - alert: InternetConnectivityLost
+    expr: probe_success{instance="8.8.8.8",job="network-connectivity"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      service: network
+      category: connectivity
+    annotations:
+      summary: "Internet connectivity lost"
+      description: "Cannot reach external DNS (8.8.8.8) - check internet connection"
+
+  - alert: BackupDNSUnreachable
+    expr: probe_success{instance="1.1.1.1",job="network-connectivity"} == 0
+    for: 5m
+    labels:
+      severity: warning
+      service: network
+      category: connectivity
+    annotations:
+      summary: "Backup DNS unreachable"
+      description: "Cannot reach Cloudflare DNS (1.1.1.1)"
+
+  - alert: HomelabGatewayDown
+    expr: probe_success{instance="10.0.10.1",job="network-connectivity"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      service: network
+      category: infrastructure
+    annotations:
+      summary: "Homelab gateway unreachable"
+      description: "Cannot reach homelab gateway (10.0.10.1) - network infrastructure issue"
+
+  - alert: VMConnectivityIssue
+    expr: probe_success{instance=~"10.0.10.1[0-9]",job="network-connectivity"} == 0
+    for: 3m
+    labels:
+      severity: warning
+      service: network
+      category: vm-connectivity
+    annotations:
+      summary: "VM {{ $labels.instance }} unreachable"
+      description: "Cannot ping VM at {{ $labels.instance }} - VM may be down or network issue"
+
+  - alert: HighNetworkLatency
+    expr: probe_duration_seconds{job="network-connectivity"} > 0.5
+    for: 10m
+    labels:
+      severity: warning
+      service: network
+      category: performance
+    annotations:
+      summary: "High network latency to {{ $labels.instance }}"
+      description: "Ping latency to {{ $labels.instance }} is {{ $value | humanize }}s"
+
+- name: homelab_security
+  interval: 60s
+  rules:
+  # Security-related alerts
+  - alert: UnexpectedSystemReboot
+    expr: time() - node_boot_time_seconds < 300
+    labels:
+      severity: warning
+      service: system
+      category: security
+    annotations:
+      summary: "System {{ $labels.instance }} recently rebooted"
+      description: "{{ $labels.instance }} rebooted {{ $value | humanize }} seconds ago - verify if expected"
+
+  - alert: HighLoginFailures
+    expr: increase(node_systemd_unit_state{name="ssh.service",state="failed"}[1h]) > 10
+    for: 5m
+    labels:
+      severity: warning
+      service: security
+      category: authentication
+    annotations:
+      summary: "High SSH login failures on {{ $labels.instance }}"
+      description: "{{ $value }} SSH login failures in the last hour"

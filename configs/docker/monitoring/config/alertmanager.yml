@@ -1,0 +1,162 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'homelab-alerts@localhost'
+  smtp_auth_username: ''
+  smtp_auth_password: ''
+  smtp_auth_secret: ''
+
+# Templates for notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree for alerts
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 4h
+  receiver: 'homelab-default'
+  routes:
+  # Critical alerts get immediate attention
+  - match:
+      severity: critical
+    receiver: 'homelab-critical'
+    group_wait: 5s
+    repeat_interval: 30m
+  
+  # System alerts
+  - match:
+      category: system
+    receiver: 'homelab-system'
+    group_interval: 2m
+    repeat_interval: 2h
+  
+  # Network alerts
+  - match:
+      service: network
+    receiver: 'homelab-network'
+    group_interval: 1m
+    repeat_interval: 1h
+  
+  # Container alerts
+  - match:
+      service: containers
+    receiver: 'homelab-containers'
+    repeat_interval: 1h
+  
+  # DNS/Pi-hole alerts
+  - match:
+      service: dns
+    receiver: 'homelab-dns'
+    repeat_interval: 1h
+
+# Inhibition rules - suppress less severe alerts when more severe ones are active
+inhibit_rules:
+  # Suppress warnings if critical alerts are firing for the same service
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance', 'service']
+
+  # Suppress individual service alerts if the entire system is down
+  - source_match:
+      alertname: 'SystemDown'
+    target_match_re:
+      alertname: '(ServiceDown|ContainerDown|WebServiceUnresponsive)'
+    equal: ['instance']
+
+  # Suppress network-dependent alerts when internet is down
+  - source_match:
+      alertname: 'InternetConnectivityLost'
+    target_match_re:
+      service: 'web|dns'
+
+# Receivers define where alerts are sent
+receivers:
+- name: 'homelab-default'
+  webhook_configs:
+  - url: 'http://localhost:5001/webhook/general'
+    send_resolved: true
+    title: 'Homelab Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      Severity: {{ .Labels.severity }}
+      Service: {{ .Labels.service }}
+      Instance: {{ .Labels.instance }}
+      Status: {{ .Status }}
+      {{ end }}
+
+- name: 'homelab-critical'
+  # For future email/SMS integration
+  webhook_configs:
+  - url: 'http://localhost:5001/webhook/critical'
+    send_resolved: true
+    title: 'CRITICAL: Homelab {{ .GroupLabels.alertname }}'
+    text: |
+      🚨 CRITICAL ALERT 🚨
+      {{ range .Alerts }}
+      Problem: {{ .Annotations.summary }}
+      Details: {{ .Annotations.description }}
+      System: {{ .Labels.instance }}
+      Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ if .Annotations.runbook }}
+      Runbook: {{ .Annotations.runbook }}
+      {{ end }}
+      {{ end }}
+
+- name: 'homelab-system'
+  webhook_configs:
+  - url: 'http://localhost:5001/webhook/system'
+    send_resolved: true
+    title: 'System Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      System Alert Details:
+      {{ range .Alerts }}
+      • {{ .Annotations.summary }}
+      • Instance: {{ .Labels.instance }}
+      • Category: {{ .Labels.category }}
+      • Status: {{ .Status }}
+      {{ end }}
+
+- name: 'homelab-network'
+  webhook_configs:
+  - url: 'http://localhost:5001/webhook/network'
+    send_resolved: true
+    title: 'Network Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      Network Issue Detected:
+      {{ range .Alerts }}
+      • Problem: {{ .Annotations.summary }}
+      • Target: {{ .Labels.instance }}
+      • Details: {{ .Annotations.description }}
+      {{ end }}
+
+- name: 'homelab-containers'
+  webhook_configs:
+  - url: 'http://localhost:5001/webhook/containers'
+    send_resolved: true
+    title: 'Container Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      Container Issue:
+      {{ range .Alerts }}
+      • Container: {{ .Labels.name | default .Labels.instance }}
+      • Issue: {{ .Annotations.summary }}
+      • Status: {{ .Status }}
+      {{ end }}
+
+- name: 'homelab-dns'
+  webhook_configs:
+  - url: 'http://localhost:5001/webhook/dns'
+    send_resolved: true
+    title: 'DNS/Pi-hole Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      DNS Service Alert:
+      {{ range .Alerts }}
+      • Service: Pi-hole DNS
+      • Issue: {{ .Annotations.summary }}
+      • Details: {{ .Annotations.description }}
+      • Impact: DNS filtering may be affected
+      {{ end }}

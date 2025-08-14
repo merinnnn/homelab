@@ -1,0 +1,137 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    monitor: 'homelab-monitor'
+    cluster: 'homelab-proxmox'
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          instance: 'prometheus-server'
+          service: 'monitoring'
+          location: 'docker-host'
+
+  # Docker Host System Metrics
+  - job_name: 'docker-host-system'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'docker-host'
+          service: 'system'
+          vm_id: '120'
+          location: '10.0.10.20'
+    scrape_interval: 15s
+
+  # Pi-hole System Metrics
+  - job_name: 'pihole-system'
+    static_configs:
+      - targets: ['10.0.10.10:9100']
+        labels:
+          instance: 'pihole-vm'
+          service: 'system'
+          vm_id: '110'
+          location: '10.0.10.10'
+    scrape_interval: 30s
+
+  # Docker Container Metrics
+  - job_name: 'docker-containers'
+    static_configs:
+      - targets: ['cadvisor:8081']
+        labels:
+          instance: 'docker-host'
+          service: 'containers'
+          location: '10.0.10.20'
+    scrape_interval: 15s
+
+  # Pi-hole DNS Metrics
+  - job_name: 'pihole-dns'
+    static_configs:
+      - targets: ['pihole-exporter:9617']
+        labels:
+          instance: 'pihole'
+          service: 'dns'
+          location: '10.0.10.10'
+    scrape_interval: 30s
+
+  # Service Health Checks
+  - job_name: 'service-health-http'
+    metrics_path: '/probe'
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://10.0.10.10/admin      # Pi-hole
+        - http://10.0.10.20:9000       # Portainer
+        - http://10.0.10.20:3001       # Uptime Kuma
+        - http://10.0.10.20:3000       # Grafana
+        - http://10.0.10.20:9090       # Prometheus
+        - http://10.0.10.20:8081       # cAdvisor
+        labels:
+          service_type: 'web-interface'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    scrape_interval: 60s
+
+  # Network Connectivity Tests
+  - job_name: 'network-connectivity'
+    metrics_path: '/probe'
+    params:
+      module: [icmp]
+    static_configs:
+      - targets:
+        - 8.8.8.8           # Google DNS
+        - 1.1.1.1           # Cloudflare DNS
+        - 10.0.10.1         # Homelab Gateway
+        - 10.0.10.10        # Pi-hole VM
+        - 10.0.10.20        # Docker Host VM
+        labels:
+          service_type: 'network-ping'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    scrape_interval: 30s
+
+  # DNS Resolution Tests
+  - job_name: 'dns-resolution'
+    metrics_path: '/probe'
+    params:
+      module: [dns_udp]
+    static_configs:
+      - targets:
+        - google.com
+        - github.com
+        - docker.com
+        - cloudflare.com
+        labels:
+          service_type: 'dns-query'
+          dns_server: 'pihole'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+    scrape_interval: 60s
