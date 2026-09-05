@@ -1,144 +1,152 @@
+# Homelab Infrastructure
 
-# 🧪 Homelab Infrastructure — Self-Hosted Automation Lab
+A Proxmox-based virtual environment for self-hosted services and infrastructure automation.
 
-Welcome to my homelab! This project is a reproducible infrastructure-as-code setup designed for learning, experimentation, and hosting essential services on a single-node **Proxmox-based virtual environment**.
+## Hardware
 
----
+| Component | Specification |
+|---|---|
+| **Host** | HP EliteDesk Mini G2 |
+| **CPU** | Intel Core i7-8700 (6 cores) |
+| **RAM** | 8 GB DDR4 |
+| **Storage** | 256 GB SSD |
+| **Network** | Bridged via Wi-Fi extender |
+| **Hypervisor** | Proxmox VE |
 
-## 🖥️ Hardware
+## Network Architecture
 
-| Component        | Spec                         |
-|------------------|------------------------------|
-| **Host Device**   | HP EliteDesk Mini G2         |
-| **CPU**           | Intel i7-8700 (6 cores)     |
-| **RAM**           | 8GB DDR4                    |
-| **Disk**          | 256GB SSD                    |
-| **Network**       | WiFi extender (bridged)      |
-| **Virtualization**| Proxmox VE                   |
-
----
-
-## 🌐 Network Architecture
-
-```txt
-        [Internet]
-            |
-     [WiFi Extender]
-            |
-     [Proxmox Host (vmbr0)]
-            |
-        ┌───vmbr1───┐
-        │           │
-    [Pi-hole]   [Docker Host]
-   10.0.10.10    10.0.10.20
+```text
+                         [ Internet ]
+                              |
+                       [ Wi-Fi Extender ]
+                              |
+                    [ Proxmox Host / vmbr0 ]
+                              |
+                         ┌────┴────┐
+                         │  vmbr1  │
+                         │ Internal│
+                         │ Network │
+                         └────┬────┘
+                              |
+                    10.0.10.0/24
+                         /         \
+                        /           \
+                 [ Pi-hole ]   [ Docker Host ]
+                  10.0.10.10     10.0.10.20
+                                     |
+                              ┌──────┴──────┐
+                              |             |
+                         [Portainer]   [Uptime Kuma]
+                          :9000            :3001
 ```
 
-- **vmbr0**: External bridge (connected to LAN via WiFi extender)
-- **vmbr1**: Internal isolated homelab network (10.0.10.0/24)
-- **Gateway**: 10.0.10.1 (Proxmox host)
+### Network Interfaces
 
----
+- **`vmbr0`** — External bridge connected to the physical LAN through the Wi-Fi extender.
+- **`vmbr1`** — Internal, isolated homelab network using `10.0.10.0/24`.
+- **Gateway** — `10.0.10.1` (Proxmox host).
 
-## 📦 Services Deployed
+## Deployed Services
 
-| Service       | Purpose                      | URL                                |
-|---------------|------------------------------|-------------------------------------|
-| **Pi-hole**   | DNS filtering & Ad blocking  | `http://<HOST>:8080/admin`         |
-| **Portainer** | Docker management UI         | `http://<HOST>:9000`               |
-| **Uptime Kuma** | Monitoring & alerts         | `http://<HOST>:3001`               |
+| Service | Host | Port | Purpose |
+|---|---|---:|---|
+| **Pi-hole** | `10.0.10.10` | — | DNS filtering and ad blocking |
+| **Portainer** | `10.0.10.20` | `9000` | Docker container management |
+| **Uptime Kuma** | `10.0.10.20` | `3001` | Service monitoring and alerts |
 
-Each is isolated inside its own VM or containerized environment.
+### Service URLs
 
----
-
-## 📁 Repository Structure
-
-```
-homelab/
-├── docs/                 # Step-by-step setup guides
-├── scripts/              # Automations for setup & testing
-├── configs/              # Proxmox, Docker, and service config files
-├── tests/                # Connectivity & service health checks
-├── infrastructure/       # Future Terraform/Ansible expansions
-└── .github/              # CI/CD and issue templates
+```text
+Portainer:   http://10.0.10.20:9000
+Uptime Kuma: http://10.0.10.20:3001
+Pi-hole:     http://10.0.10.10
 ```
 
----
+## Repository Structure
 
-## 📚 Documentation
+```text
+.
+├── configs/
+│   ├── proxmox/
+│   ├── docker/
+│   └── services/
+├── docs/
+│   ├── setup/
+│   └── architecture/
+├── scripts/
+│   └── *.sh
+├── tests/
+│   ├── network-connectivity.sh
+│   └── service-health.sh
+└── .github/
+    └── workflows/
+        └── *.yml
+```
 
-| Guide                  | Purpose                                        |
-|------------------------|------------------------------------------------|
-| **01-proxmox-setup**   | Install and configure Proxmox VE               |
-| **02-network-configuration** | Create vmbr1 bridge, NAT, DHCP, firewall  |
-| **03-vm-creation**     | Deploy Pi-hole and Docker Host VMs            |
-| **04-service-deployment** | Setup Pi-hole, Portainer, and Uptime Kuma   |
+### Directory Overview
 
-All setup steps are **scriptable** and **documented** in [`docs/setup`](./docs/setup).
+- **`configs/`** — Proxmox, Docker, and service configuration files.
+- **`docs/`** — Setup guides and architecture documentation.
+- **`scripts/`** — Bash automation for setup and maintenance.
+- **`tests/`** — Network connectivity and service health-check scripts.
+- **`.github/workflows/`** — CI/CD validation pipelines.
 
----
+## Testing
 
-## 🧪 Testing & Validation
+Run the network and service health checks from the repository root:
 
-Automated tests ensure full end-to-end homelab health:
-
-- ✅ VM connectivity (gateway, DNS, internet)
-- ✅ DNS resolution + blocking (via Pi-hole)
-- ✅ Port health checks (HTTP, DNS, etc.)
-- ✅ HTTP interface responses (curl)
-- ✅ External access (via NAT rules)
-
-> Run:
 ```bash
 bash tests/network-connectivity.sh
 bash tests/service-health.sh
 ```
 
----
+These scripts verify:
 
-## 🛡️ Security & Isolation
+- Network connectivity between infrastructure components.
+- Availability of deployed services.
+- Basic health of the homelab network.
 
-- Internal services are **fully air-gapped** from the internet
-- **Port forwarding rules** (iptables) expose only necessary ports externally
-- SSH hardened, root login disabled, UFW and firewall rules configured
-- DNS logs and metrics captured via Pi-hole and future Prometheus setup
+## Security
 
----
+The current security model includes:
 
-## 📈 Monitoring (WIP)
+- Internal services isolated from direct external internet access.
+- `iptables` NAT and port-forwarding rules used to expose only required services.
+- SSH hardened with root login disabled.
+- Internal services hosted on the isolated `vmbr1` network.
 
-Planned:
+> **Note:** Port-forwarding and firewall rules should be reviewed whenever a new externally accessible service is deployed.
 
-- Prometheus metrics via exporters
-- Grafana dashboards for system + service health
-- Alertmanager for failure notification
+## Future Plans
 
----
+### Remote Access
 
-## 🔄 Backup & Recovery
+- [ ] Deploy **WireGuard VPN** for secure remote access.
+- [ ] Avoid exposing management interfaces directly to the public internet.
 
-- Daily VM snapshot backups using `vzdump`S
+### Infrastructure Automation
 
----
+- [ ] Introduce **Ansible** for automated VM provisioning and configuration.
+- [ ] Automate repeatable host and service setup.
 
-## 🧰 Tooling
+### Monitoring
 
-- **Virtualization**: Proxmox VE (KVM-based)
-- **Containerization**: Docker, Docker Compose
-- **Monitoring**: Uptime Kuma (now), Prometheus/Grafana (soon)
-- **Scripting**: Bash automation for setup/testing
-- **Networking**: iptables, NAT, port forwarding
-- **CI/CD**: GitHub Actions for doc + config linting
+- [ ] Deploy **Prometheus** for metrics collection.
+- [ ] Deploy **Grafana** for dashboards and visualization.
+- [ ] Integrate monitoring with Uptime Kuma where appropriate.
 
----
+### Reverse Proxy
 
-## 🛣️ Future Roadmap
+- [ ] Deploy **HAProxy** as a reverse proxy.
+- [ ] Configure SSL/TLS termination.
+- [ ] Centralize access to self-hosted web services.
 
-- 🔒 WireGuard VPN for secure remote access
-- 🐧 Ansible-based VM provisioning
-- 🌍 Terraform for infrastructure templating
-- 📊 Full Prometheus + Grafana monitoring stack
-- 🌐 HAProxy reverse proxy for SSL + load balancing
+## Architecture Goals
 
----
+The homelab is designed around the following principles:
 
+1. **Isolation** — Keep infrastructure and self-hosted services on an internal network.
+2. **Security** — Minimize externally exposed services and harden administrative access.
+3. **Automation** — Reduce manual configuration through scripts and Ansible.
+4. **Observability** — Monitor service availability and system health.
+5. **Scalability** — Keep the architecture flexible enough to add additional VMs, containers, and services.
