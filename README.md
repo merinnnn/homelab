@@ -2,151 +2,154 @@
 
 A Proxmox-based virtual environment for self-hosted services and infrastructure automation.
 
+---
+
 ## Hardware
 
 | Component | Specification |
-|---|---|
-| **Host** | HP EliteDesk Mini G2 |
-| **CPU** | Intel Core i7-8700 (6 cores) |
-| **RAM** | 8 GB DDR4 |
-| **Storage** | 256 GB SSD |
-| **Network** | Bridged via Wi-Fi extender |
-| **Hypervisor** | Proxmox VE |
+| :--- | :--- |
+| **Nodes** | 2× Mini PCs |
+| **Hypervisor** | Proxmox VE 9.x |
+| **Network** | TP-Link RE220 Wi-Fi Extender → Ethernet Switch |
+
+---
 
 ## Network Architecture
 
 ```text
-                         [ Internet ]
-                              |
-                       [ Wi-Fi Extender ]
-                              |
-                    [ Proxmox Host / vmbr0 ]
-                              |
-                         ┌────┴────┐
-                         │  vmbr1  │
-                         │ Internal│
-                         │ Network │
-                         └────┬────┘
-                              |
-                    10.0.10.0/24
-                         /         \
-                        /           \
-                 [ Pi-hole ]   [ Docker Host ]
-                  10.0.10.10     10.0.10.20
-                                     |
-                              ┌──────┴──────┐
-                              |             |
-                         [Portainer]   [Uptime Kuma]
-                          :9000            :3001
+               [ Main Router ]
+                      |
+            [ TP-Link RE220 Extender ]
+                      |
+                [ Ethernet Switch ]
+                 /             \
+        [ Node 1 ]         [ Node 2 ]
+         /      \            /      \
+     vmbr0    vmbr1      vmbr0    vmbr1
+   (Main)   (Test)     (Main)   (Test)
+      |        |          |        |
+  [Pi-hole] [Test VMs] [Docker]  [Test VMs]
 ```
 
-### Network Interfaces
+### Network Bridges
 
-- **`vmbr0`** — External bridge connected to the physical LAN through the Wi-Fi extender.
-- **`vmbr1`** — Internal, isolated homelab network using `10.0.10.0/24`.
-- **Gateway** — `10.0.10.1` (Proxmox host).
+| Bridge | Purpose | Subnet | Internet Access |
+| :--- | :--- | :--- | :--- |
+| `vmbr0` | Production services | `192.168.1.0/24` | Direct (via main router) |
+| `vmbr1` | Isolated test network | `10.0.10.0/24` | NAT via `vmbr0` |
+
+- **`vmbr0`** is bridged to the physical Ethernet interface. MAC passthrough is confirmed working via the TP-Link RE220, allowing VMs and containers to receive native IPs from the main router.
+- **`vmbr1`** is an internal-only bridge. Outbound internet access is provided via `nftables` masquerade on the Proxmox host. Inbound connections originating from the main LAN are dropped.
+
+---
 
 ## Deployed Services
 
-| Service | Host | Port | Purpose |
-|---|---|---:|---|
-| **Pi-hole** | `10.0.10.10` | — | DNS filtering and ad blocking |
-| **Portainer** | `10.0.10.20` | `9000` | Docker container management |
-| **Uptime Kuma** | `10.0.10.20` | `3001` | Service monitoring and alerts |
+| Service | Host | IP | Port | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **Pi-hole** | Node 1 LXC | `192.168.1.53` | `80` | DNS filtering & ad blocking |
+| **Docker Host** | Node 1 LXC | `192.168.1.54` | — | Container runtime |
+| **Portainer** | Docker Host | `192.168.1.54` | `9000` | Docker management UI |
+| **Uptime Kuma** | Docker Host | `192.168.1.54` | `3001` | Service monitoring |
 
-### Service URLs
-
-```text
-Portainer:   http://10.0.10.20:9000
-Uptime Kuma: http://10.0.10.20:3001
-Pi-hole:     http://10.0.10.10
-```
+---
 
 ## Repository Structure
 
 ```text
 .
-├── configs/
-│   ├── proxmox/
-│   ├── docker/
-│   └── services/
-├── docs/
-│   ├── setup/
-│   └── architecture/
 ├── scripts/
-│   └── *.sh
-├── tests/
-│   ├── network-connectivity.sh
-│   └── service-health.sh
+│   ├── bootstrap/               # Node initialization (run once per node)
+│   │   ├── post-install.sh
+│   │   ├── network.sh
+│   │   └── nat.sh
+│   ├── deploy/                  # Service deployment
+│   │   ├── pihole.sh
+│   │   └── docker-host.sh
+│   └── tests/                   # Health checks
+│       ├── network-connectivity.sh
+│       └── service-health.sh
+├── configs/
+│   ├── docker/                  # Docker Compose stacks
+│   │   ├── pihole/
+│   │   ├── portainer/
+│   │   └── uptime-kuma/
+│   └── proxmox/                 # Proxmox config templates
+├── docs/                        # Architecture notes
 └── .github/
-    └── workflows/
-        └── *.yml
+    └── workflows/               # CI/CD pipelines
 ```
 
-### Directory Overview
+---
 
-- **`configs/`** — Proxmox, Docker, and service configuration files.
-- **`docs/`** — Setup guides and architecture documentation.
-- **`scripts/`** — Bash automation for setup and maintenance.
-- **`tests/`** — Network connectivity and service health-check scripts.
-- **`.github/workflows/`** — CI/CD validation pipelines.
+## Quick Start
 
-## Testing
-
-Run the network and service health checks from the repository root:
+### 1. Bootstrap a New Node
 
 ```bash
-bash tests/network-connectivity.sh
-bash tests/service-health.sh
+# Configure enterprise/no-subscription repos, remove subscription nag
+sudo bash scripts/bootstrap/post-install.sh
+
+# Set up vmbr0 (main) and vmbr1 (test) bridges
+sudo PROXMOX_IP=192.168.1.50 bash scripts/bootstrap/network.sh
+sudo reboot
+
+# Enable internet masquerade for the isolated test network
+sudo bash scripts/bootstrap/nat.sh
 ```
 
-These scripts verify:
+### 2. Deploy Services
 
-- Network connectivity between infrastructure components.
-- Availability of deployed services.
-- Basic health of the homelab network.
+```bash
+# Pi-hole (DNS sinkhole for the primary network)
+sudo bash scripts/deploy/pihole.sh
 
-## Security
+# Docker host (for Portainer, Uptime Kuma, etc.)
+sudo bash scripts/deploy/docker-host.sh
+```
 
-The current security model includes:
+### 3. Run Verification Tests
 
-- Internal services isolated from direct external internet access.
-- `iptables` NAT and port-forwarding rules used to expose only required services.
-- SSH hardened with root login disabled.
-- Internal services hosted on the isolated `vmbr1` network.
+```bash
+bash scripts/tests/network-connectivity.sh
+bash scripts/tests/service-health.sh
+```
 
-> **Note:** Port-forwarding and firewall rules should be reviewed whenever a new externally accessible service is deployed.
+---
+
+## Configuration
+
+All deployment scripts support customization through environment variables:
+
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `PROXMOX_IP` | `192.168.1.50` | Static IP for the Proxmox host |
+| `GATEWAY` | `192.168.1.1` | Main upstream router IP |
+| `CT_ID` | `100` / `101` | Proxmox Container ID |
+| `CT_IP` | `192.168.1.53` / `.54` | Container static IPv4 address |
+| `CT_PASS` | `ChangeMe123!` | Initial container root password |
+
+**Example:**
+
+```bash
+sudo CT_ID=200 CT_IP=192.168.1.60 bash scripts/deploy/pihole.sh
+```
+
+---
+
+## Architecture Decisions
+
+- **No Proxmox Cluster:** The Wi-Fi extender backhaul introduces latency spikes and jitter that risk split-brain conditions in a 2-node Corosync cluster. Nodes operate independently and are orchestrated via these scripts.
+- **LXC over VMs:** System containers provide near-bare-metal performance with minimal RAM and CPU overhead on compact Mini PC nodes.
+- **nftables over iptables:** Native to Proxmox VE 9.x. All NAT, port forwarding, and isolation rules utilize modern `nftables` syntax.
+- **Split Network Design:** Production workloads attach to `vmbr0` for flat LAN visibility, while untrusted or experimental workloads run isolated on `vmbr1` behind NAT.
+
+---
 
 ## Future Plans
 
-### Remote Access
-
-- [ ] Deploy **WireGuard VPN** for secure remote access.
-- [ ] Avoid exposing management interfaces directly to the public internet.
-
-### Infrastructure Automation
-
-- [ ] Introduce **Ansible** for automated VM provisioning and configuration.
-- [ ] Automate repeatable host and service setup.
-
-### Monitoring
-
-- [ ] Deploy **Prometheus** for metrics collection.
-- [ ] Deploy **Grafana** for dashboards and visualization.
-- [ ] Integrate monitoring with Uptime Kuma where appropriate.
-
-### Reverse Proxy
-
-- [ ] Deploy **HAProxy** as a reverse proxy.
-- [ ] Configure SSL/TLS termination.
-- [ ] Centralize access to self-hosted web services.
-
-## Architecture Goals
-
-The homelab is designed around the following principles:
-
-1. **Isolation** — Keep infrastructure and self-hosted services on an internal network.
-2. **Security** — Minimize externally exposed services and harden administrative access.
-3. **Automation** — Reduce manual configuration through scripts and Ansible.
-4. **Observability** — Monitor service availability and system health.
-5. **Scalability** — Keep the architecture flexible enough to add additional VMs, containers, and services.
+- [ ] WireGuard VPN for secure external access
+- [ ] Ansible playbooks for multi-node orchestration
+- [ ] Prometheus + Grafana metrics collection stack
+- [ ] HAProxy reverse proxy with automated Let's Encrypt SSL termination
+- [ ] Proxmox Backup Server (PBS) integration for scheduled off-node backups
