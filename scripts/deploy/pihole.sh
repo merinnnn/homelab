@@ -32,13 +32,19 @@ echo "  Gateway:  $GATEWAY"
 echo "  Password: $CT_PASS"
 echo ""
 
-TEMPLATE="debian-12-standard_12.7-1_amd64.tar.zst"
+# Dynamically find the latest Debian 12 standard template
+TEMPLATE=$(pveam available --section system | grep debian-12-standard | awk '{print $2}' | sort -V | tail -1)
+
+if [[ -z "$TEMPLATE" ]]; then
+    echo "ERROR: Could not find a Debian 12 template in the Proxmox repository."
+    exit 1
+fi
+
 TEMPLATE_PATH="/var/lib/vz/template/cache/$TEMPLATE"
 
 if [[ ! -f "$TEMPLATE_PATH" ]]; then
-    echo "Downloading Debian 12 template..."
-    mkdir -p /var/lib/vz/template/cache
-    wget -q --show-progress -O "$TEMPLATE_PATH" "https://download.proxmox.com/images/system/$TEMPLATE"
+    echo "Downloading template: $TEMPLATE ..."
+    pveam download local "$TEMPLATE"
 fi
 
 if pct status $CT_ID &>/dev/null; then
