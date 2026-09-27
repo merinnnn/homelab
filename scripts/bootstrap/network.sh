@@ -4,6 +4,7 @@ set -euo pipefail
 # Lab configuration
 LAB_BRIDGE="vmbr1"
 LAB_ADDR="10.0.10.1/24"
+LAB_IP="${LAB_ADDR%/*}"
 LAB_NET="10.0.10.0/24"
 DHCP_START="10.0.10.100"
 DHCP_END="10.0.10.200"
@@ -50,6 +51,17 @@ cat > /etc/nftables.conf <<EOF
 flush ruleset
 
 table inet homelab {
+    chain input {
+        type filter hook input priority 0; policy accept;
+
+        ct state established,related accept
+
+        iifname "$LAB_BRIDGE" udp dport { 53, 67 } accept
+        iifname "$LAB_BRIDGE" tcp dport 53 accept
+        iifname "$LAB_BRIDGE" ip daddr $LAB_IP ip protocol icmp accept
+        iifname "$LAB_BRIDGE" drop
+    }
+
     chain forward {
         type filter hook forward priority 0; policy accept;
 
@@ -73,8 +85,6 @@ systemctl enable nftables
 # DHCP + DNS for lab
 apt-get update
 apt-get install -y dnsmasq
-
-LAB_IP="${LAB_ADDR%/*}"
 
 cat > /etc/dnsmasq.d/homelab.conf <<EOF
 interface=$LAB_BRIDGE
