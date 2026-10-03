@@ -1,28 +1,49 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-HOSTNAME="lxc-test2"
-BRIDGE="vmbr1"
+[ $# -ge 1 ] || {
+    echo "Usage: $0 <hostname> [bridge]"
+    exit 1
+}
+
+HOSTNAME="$1"
+BRIDGE="${2:-vmbr1}"
+
+DEBIAN_RELEASE="13"
+ARCH="$(dpkg --print-architecture)"
+
 CORES=1
 MEMORY=512
 SWAP=256
 DISK=4
 
-VMID=$(pvesh get /cluster/nextid)
+VMID="$(pvesh get /cluster/nextid)"
 
-DEBIAN_TEMPLATES=$(pveam list local | awk '/debian-13-standard/ {print $1}')
-TEMPLATE_COUNT=$(printf '%s\n' "$DEBIAN_TEMPLATES" | awk 'NF' | wc -l)
+TEMPLATES="$(
+    for storage in $(pvesm status -content vztmpl |
+        awk 'NR > 1 && $3 == "active" {print $1}'); do
+        pveam list "$storage"
+    done |
+    awk -v release="$DEBIAN_RELEASE" -v arch="$ARCH" \
+        '$1 ~ "/debian-" release "-standard_" && $1 ~ "_" arch "\\.tar\\.zst$" {print $1}'
+)"
+
+TEMPLATE_COUNT="$(printf '%s\n' "$TEMPLATES" | awk 'NF' | wc -l)"
 
 [ "$TEMPLATE_COUNT" -eq 1 ] || {
-    echo "Expected exactly one Debian 13 template; found $TEMPLATE_COUNT"
-    printf '%s\n' "$DEBIAN_TEMPLATES"
+    echo "Expected exactly one Debian $DEBIAN_RELEASE $ARCH template; found $TEMPLATE_COUNT"
+    printf '%s\n' "$TEMPLATES"
     exit 1
 }
 
-TEMPLATE="$DEBIAN_TEMPLATES"
+TEMPLATE="$TEMPLATES"
 
-ROOT_STORAGES=$(pvesm status --content rootdir | awk 'NR>1 && $3=="active" {print $1}')
-STORAGE_COUNT=$(printf '%s\n' "$ROOT_STORAGES" | awk 'NF' | wc -l)
+ROOT_STORAGES="$(
+    pvesm status -content rootdir |
+    awk 'NR > 1 && $3 == "active" {print $1}'
+)"
+
+STORAGE_COUNT="$(printf '%s\n' "$ROOT_STORAGES" | awk 'NF' | wc -l)"
 
 [ "$STORAGE_COUNT" -eq 1 ] || {
     echo "Expected exactly one active rootdir storage; found $STORAGE_COUNT"
