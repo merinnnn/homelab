@@ -94,6 +94,12 @@ dhcp-option=option:router,$LAB_IP
 dhcp-option=option:dns-server,$LAB_IP
 EOF
 
+# Prefer IPv4 when IPv6 is unavailable
+if ! grep -qE '^[[:space:]]*precedence[[:space:]]+::ffff:0:0/96[[:space:]]+100([[:space:]]|$)' /etc/gai.conf; then
+    cp -an /etc/gai.conf /etc/gai.conf.pre-homelab
+    printf '\n# Prefer IPv4 when both IPv4 and IPv6 are available\nprecedence ::ffff:0:0/96  100\n' >> /etc/gai.conf
+fi
+
 dnsmasq --test
 systemctl enable --now dnsmasq
 systemctl restart dnsmasq
