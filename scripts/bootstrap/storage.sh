@@ -42,6 +42,41 @@ pvesm status
 echo "--- DISK HEALTH ($DISK) ---"
 smartctl -H "$DISK"
 
-echo "--- TRIM ---"
-systemctl is-enabled fstrim.timer
-systemctl is-active fstrim.timer
+echo "--- FINAL STATE ---"
+
+if grep -R 'thin_pool_autoextend_' \
+    /etc/lvm/lvmlocal.conf \
+    /etc/lvm/lvm.conf 2>/dev/null |
+    grep -v '^[^:]*:[[:space:]]*#' |
+    grep -q .; then
+    echo "Active custom thin-pool autoextend configuration found"
+    exit 1
+fi
+echo "Autoextend: none"
+
+lvmconfig --validate
+
+[ "$(lvs --noheadings -o seg_monitor "$POOL" | xargs)" = "monitored" ] || {
+    echo "Thin pool is not monitored"
+    exit 1
+}
+echo "Thin pool monitoring: active"
+
+[ "$(systemctl is-enabled fstrim.timer)" = "enabled" ] || {
+    echo "fstrim.timer is not enabled"
+    exit 1
+}
+
+[ "$(systemctl is-active fstrim.timer)" = "active" ] || {
+    echo "fstrim.timer is not active"
+    exit 1
+}
+echo "TRIM: enabled and active"
+
+if [ -n "$(systemctl --failed --no-legend --plain)" ]; then
+    systemctl --failed --no-pager
+    exit 1
+fi
+echo "Failed services: 0"
+
+echo "Storage setup complete."
