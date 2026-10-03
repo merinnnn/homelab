@@ -26,18 +26,6 @@ done
 
 DISK="$DEVICE"
 
-# Remove obsolete homelab auto-extension policy
-if grep -q 'thin_pool_autoextend_' /etc/lvm/lvmlocal.conf; then
-    cp -an /etc/lvm/lvmlocal.conf /etc/lvm/lvmlocal.conf.pre-homelab
-
-    sed -i '/^[[:space:]]*activation[[:space:]]*{/,/^[[:space:]]*}/{
-        /thin_pool_autoextend_threshold/d
-        /thin_pool_autoextend_percent/d
-        /^[[:space:]]*activation[[:space:]]*{$d
-        /^[[:space:]]*}$/d
-    }' /etc/lvm/lvmlocal.conf
-fi
-
 lvchange --monitor y "$POOL"
 systemctl enable --now lvm2-monitor
 systemctl enable --now fstrim.timer
