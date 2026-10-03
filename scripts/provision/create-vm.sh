@@ -1,38 +1,58 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-NAME="vm-test2"
-BRIDGE="vmbr1"
+[ $# -ge 1 ] || {
+    echo "Usage: $0 <name> [bridge] [ssh-public-key]"
+    exit 1
+}
+
+NAME="$1"
+BRIDGE="${2:-vmbr1}"
+SSH_KEY="${3:-/root/.ssh/id_rsa.pub}"
+
+DEBIAN_RELEASE="13"
+ARCH="$(dpkg --print-architecture)"
+
 CORES=2
 MEMORY=2048
 DISK=8
 CIUSER="homelab"
-SSH_KEY="/root/.ssh/id_rsa.pub"
 
-VMID=$(pvesh get /cluster/nextid)
+VMID="$(pvesh get /cluster/nextid)"
 
-IMAGES=$(pvesm status --content images | awk 'NR>1 && $3=="active" {print $1}')
-IMAGE_COUNT=$(printf '%s\n' "$IMAGES" | awk 'NF' | wc -l)
+IMPORTS="$(
+    for storage in $(pvesm status -content import |
+        awk 'NR > 1 && $3 == "active" {print $1}'); do
+        pvesm list "$storage" --content import
+    done |
+    awk -v release="$DEBIAN_RELEASE" -v arch="$ARCH" \
+        '$1 ~ "/debian-" release "-genericcloud-" arch "\\.qcow2$" {print $1}'
+)"
 
-[ "$IMAGE_COUNT" -eq 1 ] || {
-    echo "Expected exactly one active images storage; found $IMAGE_COUNT"
-    printf '%s\n' "$IMAGES"
-    exit 1
-}
-
-STORAGE="$IMAGES"
-
-IMPORTS=$(pvesm list local --content import |
-    awk '$1 ~ /debian-13-genericcloud-amd64\.qcow2$/ {print $1}')
-IMPORT_COUNT=$(printf '%s\n' "$IMPORTS" | awk 'NF' | wc -l)
+IMPORT_COUNT="$(printf '%s\n' "$IMPORTS" | awk 'NF' | wc -l)"
 
 [ "$IMPORT_COUNT" -eq 1 ] || {
-    echo "Expected exactly one Debian 13 genericcloud image; found $IMPORT_COUNT"
+    echo "Expected exactly one Debian $DEBIAN_RELEASE $ARCH genericcloud image; found $IMPORT_COUNT"
     printf '%s\n' "$IMPORTS"
     exit 1
 }
 
 IMAGE="$IMPORTS"
+
+IMAGE_STORAGES="$(
+    pvesm status -content images |
+    awk 'NR > 1 && $3 == "active" {print $1}'
+)"
+
+STORAGE_COUNT="$(printf '%s\n' "$IMAGE_STORAGES" | awk 'NF' | wc -l)"
+
+[ "$STORAGE_COUNT" -eq 1 ] || {
+    echo "Expected exactly one active images storage; found $STORAGE_COUNT"
+    printf '%s\n' "$IMAGE_STORAGES"
+    exit 1
+}
+
+STORAGE="$IMAGE_STORAGES"
 
 ip link show "$BRIDGE" >/dev/null 2>&1 || {
     echo "Bridge $BRIDGE not found"
