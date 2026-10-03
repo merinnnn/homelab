@@ -47,7 +47,7 @@ TEMPLATE="$(
 
 if ! pveam list "$TEMPLATE_STORAGE" |
     awk 'NR > 1 {print $1}' |
-    grep -q "/$TEMPLATE$"; then
+    grep -Fqx "${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE}"; then
     pveam download "$TEMPLATE_STORAGE" "$TEMPLATE"
 fi
 
@@ -98,7 +98,10 @@ rm -f "$TMP_SUMS"
 # Final state
 echo "--- LXC TEMPLATE ---"
 pveam list "$TEMPLATE_STORAGE" |
-    grep "/$TEMPLATE$"
+    awk 'NR > 1 {print $1}' |
+    grep -Fqx "${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE}"
+
+echo "${TEMPLATE_STORAGE}:vztmpl/${TEMPLATE}"
 
 echo "--- CLOUD IMAGE ---"
 pvesm list "$IMPORT_STORAGE" --content import |
