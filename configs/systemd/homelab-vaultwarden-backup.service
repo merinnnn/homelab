@@ -1,0 +1,10 @@
+[Unit]
+Description=Private consistent Vaultwarden backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/homelab/repo/scripts/deploy/backup-vaultwarden.py
+UMask=0077
+TimeoutStartSec=480

@@ -11,11 +11,11 @@ assert 'guest helper parses' bash -n "$SCRIPT"
 assert 'host helper parses' bash -n "$ROOT_REPO/scripts/deploy/proxmox-reverse-proxy.sh"
 assert 'test suite parses' bash -n "$0"
 bash "$SCRIPT" render home.arpa > "$WORK/Caddyfile"
-for host in pve01 pve02 pihole01 pihole02 uptime proxy; do
+for host in pve01 pve02 pihole01 pihole02 uptime proxy home vault; do
     assert "$host canonical local name rendered" grep -Fq "$host.home.arpa {" "$WORK/Caddyfile"
 done
 assert 'template tokens all replaced' bash -c '! grep -q @DOMAIN@ "$1"' _ "$WORK/Caddyfile"
-assert 'all six sites use the internal issuer' test "$(grep -c '^    tls internal$' "$WORK/Caddyfile")" = 6
+assert 'all eight sites use the internal issuer' test "$(grep -c '^    tls internal$' "$WORK/Caddyfile")" = 8
 assert 'upstream trust is scoped to both public PVE CA files' test "$(grep -c 'tls_trust_pool file /etc/caddy/current/trust/pve0[12]-ca.crt' "$WORK/Caddyfile")" = 2
 assert 'upstream TLS verification remains enabled' bash -c '! grep -q tls_insecure_skip_verify "$1"' _ "$WORK/Caddyfile"
 for domain in '' '.home.arpa' 'home.arpa.' 'home..arpa' '-home.arpa' 'home.arpa;true' 'home/../../etc' 'HOME.arpa'; do

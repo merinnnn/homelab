@@ -1,0 +1,26 @@
+title: Home lab
+description: Your services, in one place.
+startUrl: https://home.home.arpa
+theme: dark
+color: slate
+headerStyle: clean
+cardStyle: hairline
+useEqualHeights: true
+target: _self
+disableUpdateCheck: true
+disableIndexing: true
+hideVersion: true
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: true
+  hideVisitURL: true
+layout:
+  Infrastructure:
+    style: row
+    columns: 2
+  Network:
+    style: row
+    columns: 3
+  Personal:
+    style: row
+    columns: 1

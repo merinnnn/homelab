@@ -1,0 +1,23 @@
+{
+  "services": {
+    "vaultwarden": {
+      "image": "${VAULTWARDEN_IMAGE:?An immutable image digest is required}",
+      "restart": "unless-stopped",
+      "env_file": [{"path": "/etc/homelab/vaultwarden/service.env", "format": "raw"}],
+      "volumes": [{"type": "volume", "source": "data", "target": "/data"}],
+      "networks": {"proxy": {"aliases": ["homelab-vaultwarden"]}},
+      "read_only": true,
+      "tmpfs": ["/tmp:rw,noexec,nosuid,size=64m"],
+      "cap_drop": ["ALL"],
+      "cap_add": ["NET_BIND_SERVICE"],
+      "security_opt": ["no-new-privileges:true"],
+      "pids_limit": 128,
+      "mem_limit": "512m",
+      "healthcheck": {"test": ["CMD", "/healthcheck.sh"], "interval": "15s", "timeout": "5s", "start_period": "30s", "retries": 6},
+      "logging": {"driver": "local", "options": {"max-size": "10m", "max-file": "3"}},
+      "labels": {"io.homelab.managed": "vaultwarden-v1"}
+    }
+  },
+  "volumes": {"data": {"external": true, "name": "homelab-vaultwarden-data"}},
+  "networks": {"proxy": {"external": true, "name": "homelab-proxy_default"}}
+}

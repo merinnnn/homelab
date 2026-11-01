@@ -22,6 +22,8 @@ jobs:
 
       - name: Validate Docker Compose files
         env:
+          HOMEPAGE_IMAGE: ghcr.io/gethomepage/homepage:v2.7.0
+          HOMEPAGE_STACK_DIR: /opt/homelab/homepage
           CADDY_IMAGE: caddy:2.11.7-alpine
           PROXY_BIND_IP: 127.0.0.1
           PROXY_STACK_DIR: /opt/homelab/reverse-proxy
@@ -45,3 +47,13 @@ jobs:
           bash scripts/tests/reverse-proxy-offline.sh
           node scripts/tests/static-network-offline.cjs
           python3 scripts/tests/local-dns-offline.py
+
+      - name: Validate private password service Compose structure
+        env:
+          VAULTWARDEN_IMAGE: vaultwarden/server:1.37.4
+        run: docker compose -f configs/docker/vaultwarden/compose.json config --no-env-resolution --quiet
+
+      - name: Test password vault and dashboard behavior
+        run: |
+          bash scripts/tests/homepage-offline.sh
+          python3 scripts/tests/vaultwarden-offline.py

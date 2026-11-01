@@ -1,0 +1,27 @@
+- Infrastructure:
+    - Proxmox 1:
+        icon: mdi-server
+        href: https://pve01.home.arpa/
+        description: Manage the first node
+    - Proxmox 2:
+        icon: mdi-server
+        href: https://pve02.home.arpa/
+        description: Manage the second node
+- Network:
+    - Pi-hole 1:
+        icon: mdi-shield-check-outline
+        href: https://pihole01.home.arpa/admin/
+        description: Primary DNS filtering
+    - Pi-hole 2:
+        icon: mdi-shield-check-outline
+        href: https://pihole02.home.arpa/admin/
+        description: Secondary DNS filtering
+    - Uptime Kuma:
+        icon: mdi-heart-pulse
+        href: https://uptime.home.arpa/
+        description: Service monitoring
+- Personal:
+    - Vaultwarden:
+        icon: mdi-lock-outline
+        href: https://vault.home.arpa/
+        description: Your password vault
