@@ -1,4 +1,6 @@
-# Vaultwarden and Homepage
+# Vaultwarden and dashboard history
+
+The dashboard has been replaced by Homarr at the same URL; see [Homarr](homarr.md). Homepage deployment/tests below describe the previous phase and are historical. Use proxmox-homarr.sh for the current dashboard.
 
 Live status — 1 November 2026: both HTTPS services are healthy; five real frontend/policy/Host checks PASS; owner invitation/repeat verified, one pending owner persists after restart. A separate synthetic account/item passed real encryption/login/cold restore/fresh decryption and closed signup tests in disposable resources, all cleaned. The first production full-data backup passed SQLite integrity/service recovery and was privately copied off-node. Daily backups run automatically inside the VM; recurring off-node transfer remains unconfigured. No real owner master password was created by an agent.
 

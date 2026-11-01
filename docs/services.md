@@ -29,7 +29,7 @@ All three retained static networking after guest reboot; repeat migration checks
 | Pi-hole dns02 | 192.168.1.150 | https://pihole02.home.arpa/ |
 | Uptime Kuma apps01 | 192.168.1.58 | https://uptime.home.arpa/ |
 | Service links / Caddy | 192.168.1.58 | https://proxy.home.arpa/ |
-| Homepage 2.7.0 | 192.168.1.58, private Docker backend | https://home.home.arpa/ |
+| Homarr 2.10.1 | 192.168.1.58, private Docker backend | https://home.home.arpa/ |
 | Vaultwarden 1.37.4 | 192.168.1.58, private Docker backend | https://vault.home.arpa/ |
 | Grafana 13.3.0 | 192.168.1.58, private Docker backend | https://grafana.home.arpa/ |
 
@@ -41,9 +41,9 @@ Account files are root-only and outside Git: `/etc/homelab/uptime-kuma.json` on 
 
 ## Vault, dashboard and node monitoring
 
-Vaultwarden, Homepage and Prometheus 3.15.1/Grafana 13.3.0/Alertmanager 0.34.2 run as private Docker backends with pinned official image digests. Prometheus/Alertmanager have no public proxy routes or host ports. Debian node exporters 1.9.0-1+b4 run on each Proxmox LAN IP:9100. Grafana login is required; its dashboard shows both hosts' CPU, available RAM, filesystem space, exporter status and firing alerts. Six rules cover outage, sustained pressure and failed management services. Telegram firing and recovery notifications were accepted by the API with zero integration failures. See [monitoring](monitoring.md).
+Vaultwarden, Homarr and Prometheus 3.15.1/Grafana 13.3.0/Alertmanager 0.34.2 run as private Docker backends with pinned official image digests. Prometheus/Alertmanager have no public proxy routes or host ports. Debian node exporters 1.9.0-1+b4 run on each Proxmox LAN IP:9100. Grafana login is required; its dashboard shows both hosts' CPU, available RAM, filesystem space, exporter status and firing alerts. Six rules cover outage, sustained pressure and failed management services. Telegram firing and recovery notifications were accepted by the API with zero integration failures. See [monitoring](monitoring.md).
 
-Vaultwarden has one privately invited owner pending registration; public signup is denied. Choose the master password directly in the web vault. Isolated real API/encryption/cold-backup/restore acceptance passed and disposable resources were cleaned. The daily backup timer, initial private off-node copy and limitations are described in [vault and Homepage](vault-and-homepage.md). No real owner master password or real vault item was created by an agent.
+Vaultwarden has one privately invited owner pending registration; public signup is denied. Choose the master password directly in the web vault. Isolated real API/encryption/cold-backup/restore acceptance passed and disposable resources were cleaned. The daily backup timer, initial private off-node copy and limitations are described in [vault and Homarr](vault-and-homepage.md). No real owner master password or real vault item was created by an agent.
 
 All seven containers/seven persistent volumes, static network, unchanged public CA, private login, pre-restart metric history and backup timer passed a graceful apps01 VM restart after increasing its RAM to3 GiB. Host reboots were not performed. Windows normal HTTPS9/9 and router DNS/filtering/internet10/10 passed. Private Grafana/Telegram runtime data remain outside Git.
 

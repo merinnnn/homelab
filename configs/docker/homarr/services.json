@@ -1,0 +1,9 @@
+[
+  {"name":"Proxmox pve01","href":"https://pve01.home.arpa/","sourceId":"homelab-pve01","iconUrl":"/favicon.ico"},
+  {"name":"Proxmox pve02","href":"https://pve02.home.arpa/","sourceId":"homelab-pve02","iconUrl":"/favicon.ico"},
+  {"name":"Pi-hole dns01","href":"https://pihole01.home.arpa/admin/","sourceId":"homelab-pihole01","iconUrl":"/favicon.ico"},
+  {"name":"Pi-hole dns02","href":"https://pihole02.home.arpa/admin/","sourceId":"homelab-pihole02","iconUrl":"/favicon.ico"},
+  {"name":"Uptime Kuma","href":"https://uptime.home.arpa/","sourceId":"homelab-uptime","iconUrl":"/favicon.ico"},
+  {"name":"Vaultwarden","href":"https://vault.home.arpa/","sourceId":"homelab-vault","iconUrl":"/favicon.ico"},
+  {"name":"Grafana","href":"https://grafana.home.arpa/","sourceId":"homelab-grafana","iconUrl":"/favicon.ico"}
+]

@@ -64,4 +64,4 @@ See [local service access](local-access.md) for the node-local migration/DNS/Cad
 
 ## Additional apps and node monitoring
 
-[Vaultwarden and Homepage](vault-and-homepage.md) and [Prometheus/Grafana/Telegram](monitoring.md) now run in apps01. Deploy from the installed node checkout, keep runtime credentials outside Git, and retain all persistent volumes. The guest RAM increase and graceful VM restart passed; both physical hosts stayed running.
+[Vaultwarden and Homarr](vault-and-homepage.md) and [Prometheus/Grafana/Telegram](monitoring.md) now run in apps01. Deploy from the installed node checkout, keep runtime credentials outside Git, and retain all persistent volumes. The guest RAM increase and graceful VM restart passed; both physical hosts stayed running.

@@ -50,7 +50,7 @@ uptime.@DOMAIN@ {
 
 home.@DOMAIN@ {
     tls internal
-    reverse_proxy http://homelab-homepage:3000
+    reverse_proxy http://homelab-homarr:7575
 }
 
 vault.@DOMAIN@ {

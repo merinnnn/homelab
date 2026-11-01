@@ -41,7 +41,7 @@ Public AdGuard cannot resolve private home.arpa names. Keep household router DNS
 | https://pihole02.home.arpa/ | http://192.168.1.150/admin/ |
 | https://uptime.home.arpa/ | http://192.168.1.58:3001/ |
 | https://proxy.home.arpa/ | Service links |
-| https://home.home.arpa/ | http://homelab-homepage:3000/ on the private proxy network |
+| https://home.home.arpa/ | http://homelab-homarr:7575/ on the private proxy network |
 | https://vault.home.arpa/ | http://homelab-vaultwarden:80/ on the private proxy network |
 | https://grafana.home.arpa/ | http://homelab-grafana:3000/ on the private proxy network |
 
@@ -65,4 +65,4 @@ Run bash scripts/tests/reverse-proxy-offline.sh, node scripts/tests/static-netwo
 
 References: [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy), [Caddy local HTTPS](https://caddyserver.com/docs/automatic-https), [Pi-hole local hosts configuration](https://docs.pi-hole.net/ftldns/configfile/), [Windows NRPT](https://learn.microsoft.com/en-us/powershell/module/dnsclient/add-dnsclientnrptrule), [home.arpa standard](https://www.rfc-editor.org/rfc/rfc8375).
 
-Current extension: both Pi-holes serve 14 desired records. Homepage/Vaultwarden/Grafana use the existing CA and Windows suffix rule; all nine Windows HTTPS addresses passed normal trust after the final VM restart. Prometheus and Alertmanager stay internal; Grafana provides the authenticated dashboard.
+Current extension: both Pi-holes serve 14 desired records. Homarr/Vaultwarden/Grafana use the existing CA and Windows suffix rule; all nine Windows HTTPS addresses passed normal trust after the final VM restart. Prometheus and Alertmanager stay internal; Grafana provides the authenticated dashboard.

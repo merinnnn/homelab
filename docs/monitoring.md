@@ -10,7 +10,7 @@ Deploy from the installed /root/homelab checkout on each owning node. First inst
 
 ```bash
 bash scripts/deploy/proxmox-monitoring.sh 100
-bash scripts/deploy/proxmox-homepage.sh 100
+bash scripts/deploy/proxmox-homarr.sh 100
 bash scripts/deploy/proxmox-reverse-proxy.sh 100 home.arpa /etc/homelab/proxy-trust
 ```
 

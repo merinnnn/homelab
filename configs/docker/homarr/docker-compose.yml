@@ -1,0 +1,47 @@
+services:
+  homarr:
+    image: ${HOMARR_IMAGE:?resolved official digest required}
+    restart: unless-stopped
+    labels:
+      io.homelab.managed: homarr-v1
+    environment:
+      BASE_URL: https://home.home.arpa
+      SECRET_ENCRYPTION_KEY_FILE: /run/secrets/encryption-key
+      ENABLE_DOCKER: 'false'
+      ENABLE_KUBERNETES: 'false'
+      NO_EXTERNAL_CONNECTION: 'true'
+      ENABLE_DNS_CACHING: 'false'
+      LOG_LEVEL: warn
+      TZ: Europe/London
+      NODE_EXTRA_CA_CERTS: /run/homelab-ca.crt
+    dns: [192.168.1.210, 192.168.1.150]
+    volumes:
+      - data:/appdata
+      - ${HOMARR_SECRET_DIR:?private directory required}/encryption-key:/run/secrets/encryption-key:ro
+      - ${HOMARR_CA_FILE:?existing public Caddy root required}:/run/homelab-ca.crt:ro
+    networks:
+      proxy:
+        aliases: [homelab-homarr]
+    mem_limit: 768m
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, wget, -q, --spider, 'http://127.0.0.1:7575/api/health/live']
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+volumes:
+  data:
+    external: true
+    name: homelab-homarr-data
+networks:
+  proxy:
+    external: true
+    name: homelab-proxy_default

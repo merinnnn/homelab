@@ -27,8 +27,8 @@ jobs:
           ALERTMANAGER_IMAGE: prom/alertmanager:v0.34.2
           MONITORING_STACK_DIR: /opt/homelab/monitoring
           MONITORING_PRIVATE_DIR: /etc/homelab/monitoring
-          HOMEPAGE_IMAGE: ghcr.io/gethomepage/homepage:v2.7.0
-          HOMEPAGE_STACK_DIR: /opt/homelab/homepage
+          HOMARR_IMAGE: ghcr.io/homarr-labs/homarr:v2.10.1
+          HOMARR_SECRET_DIR: /etc/homelab/homarr
           CADDY_IMAGE: caddy:2.11.7-alpine
           PROXY_BIND_IP: 127.0.0.1
           PROXY_STACK_DIR: /opt/homelab/reverse-proxy
@@ -60,7 +60,8 @@ jobs:
 
       - name: Test password vault and dashboard behavior
         run: |
-          bash scripts/tests/homepage-offline.sh
+          bash scripts/tests/homarr-offline.sh
+          python3 scripts/tests/homarr-bootstrap-offline.py
           python3 scripts/tests/vaultwarden-offline.py
 
       - name: Test node monitoring behavior
