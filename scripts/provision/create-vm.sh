@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-[ $# -ge 1 ] || {
-    echo "Usage: $0 <name> [bridge] [ssh-public-key]"
+[ $# -eq 3 ] || {
+    echo "Usage: $0 <name> <bridge> <public-key-file>"
     exit 1
 }
 
 NAME="$1"
-BRIDGE="${2:-vmbr1}"
-SSH_KEY="${3:-/root/.ssh/id_rsa.pub}"
+BRIDGE="$2"
+SSH_KEY="$3"
 
 DEBIAN_RELEASE="13"
 ARCH="$(dpkg --print-architecture)"
