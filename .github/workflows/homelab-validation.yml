@@ -64,7 +64,8 @@ jobs:
           python3 scripts/tests/vaultwarden-offline.py
 
       - name: Test node monitoring behavior
-        run: bash scripts/tests/monitoring-offline.sh
+        run: |
+          bash scripts/tests/monitoring-offline.sh
           bash scripts/tests/node-exporter-offline.sh
 
       - name: Test private Telegram receiver setup

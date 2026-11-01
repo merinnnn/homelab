@@ -6,11 +6,11 @@ Scripts contain no personal public/private key material and assume no identity f
 
 ## Existing permanent resources
 
-As created on 1 November 2026:
+Current resources observed on 1 November 2026:
 
 | Node | Guest | Resources | Network |
 | --- | --- | --- | --- |
-| pve02 | VM 100, apps01 | 2 vCPU, 2 GiB RAM, 32 GiB disk | vmbr0, static/reserved 192.168.1.58 |
+| pve02 | VM 100, apps01 | 2 vCPU, 3 GiB RAM, 32 GiB disk | vmbr0, static/reserved 192.168.1.58 |
 | pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, static/reserved 192.168.1.210 |
 | pve02 | CT 101, dns02 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, static/reserved 192.168.1.150 |
 
@@ -61,3 +61,7 @@ The creation helper explicitly sets umask022 before Proxmox commands so guest co
 ## Static addresses, private names and reverse proxy
 
 See [local service access](local-access.md) for the node-local migration/DNS/Caddy commands, exact IP/MAC ownership, Windows-only local DNS rule and client certificate trust setup. Both Pi-holes and apps01 passed guest reboot/static-address checks. Keep public Proxmox CA files outside Git in /etc/homelab/proxy-trust; export only the public Caddy root certificate to clients. Preserve the private Caddy data volume and direct IP/port recovery access.
+
+## Additional apps and node monitoring
+
+[Vaultwarden and Homepage](vault-and-homepage.md) and [Prometheus/Grafana/Telegram](monitoring.md) now run in apps01. Deploy from the installed node checkout, keep runtime credentials outside Git, and retain all persistent volumes. The guest RAM increase and graceful VM restart passed; both physical hosts stayed running.

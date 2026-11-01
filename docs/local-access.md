@@ -40,7 +40,10 @@ Public AdGuard cannot resolve private home.arpa names. Keep household router DNS
 | https://pihole01.home.arpa/ | http://192.168.1.210/admin/ |
 | https://pihole02.home.arpa/ | http://192.168.1.150/admin/ |
 | https://uptime.home.arpa/ | http://192.168.1.58:3001/ |
-| https://proxy.home.arpa/ | Links to all five services |
+| https://proxy.home.arpa/ | Service links |
+| https://home.home.arpa/ | http://homelab-homepage:3000/ on the private proxy network |
+| https://vault.home.arpa/ | http://homelab-vaultwarden:80/ on the private proxy network |
+| https://grafana.home.arpa/ | http://homelab-grafana:3000/ on the private proxy network |
 
 Caddy runs in Docker in apps01, bound to its LAN address on ports80/443. HTTP redirects to HTTPS. The first installation pins the reviewed official release to its resolved digest; repeats retain it. Public Proxmox CA certificates verify each upstream's IP SAN; verification is never disabled. Prepare /etc/homelab/proxy-trust/{pve01,pve02}-ca.crt outside Git from each host's public /etc/pve/pve-root-ca.pem. Never copy TLS private keys.
 
@@ -52,7 +55,7 @@ bash scripts/deploy/proxmox-reverse-proxy.sh 100 home.arpa /etc/homelab/proxy-tr
 
 Client HTTPS uses Caddy's internal CA. Its signing keys and certificate state stay in the private homelab-caddy-data/config Docker volumes. The helper exports ONLY the public /opt/homelab/reverse-proxy/root.crt. Install that public root certificate in the intended client's trusted-root store, checking its fingerprint against the guest's exported certificate. Other devices need separate trust setup. Never commit or export the private CA volume; preserve it across upgrades/reboots.
 
-The helper refuses unknown stack directories, unrelated existing proxy project containers/volumes and configuration drift. It stages a release, validates Compose and Caddy before activation, reloads atomically, verifies all six HTTPS pages using the public CA, and rolls back on failure. Old releases/backups are retained. The Compose .env.example contains public validation fixtures only; deployment writes a digest-pinned private runtime environment.
+The helper refuses unknown stack directories, unrelated existing proxy project containers/volumes and configuration drift. It stages a release, validates Compose and Caddy before activation, reloads atomically, verifies all nine HTTPS pages using the public CA, and rolls back on failure. Old releases/backups are retained. The Compose .env.example contains public validation fixtures only; deployment writes a digest-pinned private runtime environment.
 
 This is a single proxy in apps01: if apps01/pve02 is down, friendly web URLs are unavailable. Direct IP/port management remains available on surviving nodes. This proxy is independent of household internet DNS and does not change WAN forwarding. Existing service authentication remains required; no passwords are embedded in proxy configuration.
 
@@ -61,3 +64,5 @@ This is a single proxy in apps01: if apps01/pve02 is down, friendly web URLs are
 Run bash scripts/tests/reverse-proxy-offline.sh, node scripts/tests/static-network-offline.cjs, python3 scripts/tests/local-dns-offline.py, Bash syntax checks and the required identity-free audit. Offline checks are not live deployment evidence. Live acceptance includes actual client DNS, trusted HTTPS/redirects, authenticated Pi-hole APIs, Kuma WebSockets/monitor data, Proxmox APIs/consoles, repeat deployment, restart recovery and preserved household DNS. Current observations, failures and unrun cases belong in the external knowledge vault's latest report.
 
 References: [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy), [Caddy local HTTPS](https://caddyserver.com/docs/automatic-https), [Pi-hole local hosts configuration](https://docs.pi-hole.net/ftldns/configfile/), [Windows NRPT](https://learn.microsoft.com/en-us/powershell/module/dnsclient/add-dnsclientnrptrule), [home.arpa standard](https://www.rfc-editor.org/rfc/rfc8375).
+
+Current extension: both Pi-holes serve 14 desired records. Homepage/Vaultwarden/Grafana use the existing CA and Windows suffix rule; all nine Windows HTTPS addresses passed normal trust after the final VM restart. Prometheus and Alertmanager stay internal; Grafana provides the authenticated dashboard.

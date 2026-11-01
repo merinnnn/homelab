@@ -1,4 +1,6 @@
-# Setup status — 1 November 2026
+# Setup status â€” 1 November 2026
+
+Current extension: Vaultwarden, Homepage and node usage monitoring are installed. Telegram firing/recovery notifications, real two-node metrics, private authentication, isolated encrypted-vault restore, daily backup, initial off-node backup copy and3 GiB apps01 VM restart persistence passed. See services.md, monitoring.md and vault-and-homepage.md. Owner master-password registration remains a private user step; recurring off-node backup transfer and monitoring its own pve02 failure need separate work.
 
 This records the earlier prepared-node validation. Pi-hole and Docker/Uptime Kuma have since been deployed and verified; see [running services](services.md) for current resources, endpoints and deployment checks. Earlier empty inventories refer to the pre-deployment baseline.
 

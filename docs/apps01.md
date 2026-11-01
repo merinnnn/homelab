@@ -1,6 +1,6 @@
 # Docker and Uptime Kuma on apps01
 
-Run these payloads as root **inside the Debian 13 guest**, after reviewing the allocated guest identity. They install Docker from its signed official Debian repository. They are not Proxmox host bootstrap scripts. The coordinator creates apps01 on pve02 with 2 CPU cores, 2 GiB RAM and a 32 GiB disk, then records its actual DHCP address on vmbr0. Router DHCP-pool ownership is unknown; no static `.54` address is assumed.
+Run these payloads as root **inside the Debian 13 guest**, after reviewing the allocated guest identity. They install Docker from its signed official Debian repository. They are not Proxmox host bootstrap scripts. Permanent apps01 is VM100 on pve02 with2 CPU cores,3 GiB RAM and32 GiB disk. It uses static/reserved 192.168.1.58/24 on vmbr0, gateway 192.168.1.1. Vaultwarden, Homepage and node monitoring now share this VM; see services.md and monitoring.md. The former DHCP/static-address planning statements are historical.
 
 ## Install and start privately
 
