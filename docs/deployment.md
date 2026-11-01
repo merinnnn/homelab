@@ -43,3 +43,13 @@ The host downloads the official installer from a fixed source commit, verifies i
 Use normal Git fetch/fast-forward from the development repository or a verified Git bundle. Preserve server work with an independent backup and Git stash before updating a dirty checkout. Never discard work with reset/clean or overwrite `.git`. Record exact commit IDs and retain unapplied work for review.
 
 Run `node scripts/tests/offline-behavior.cjs`, `node scripts/tests/apps-deployment.cjs`, `node scripts/tests/no-embedded-identities.cjs` and `bash scripts/tests/pihole-native-offline.sh` when Node/Bash are available. A source test pass is separate from actual running service, auth, DNS and persistence checks. Deployment status is recorded in the project reports; these commands alone do not assert that deployment completed.
+
+## Additional named Pi-hole instance
+
+The node-local wrapper accepts optional expected hostname and DNS port:
+
+```bash
+bash scripts/deploy/proxmox-pihole.sh <allocated-ctid> /etc/homelab/pihole-password dns02 5353
+```
+
+The original two-argument invocation remains dns01 on port53. An explicit dns02 instance and alternate backend port support redundant filtering behind health-checked DNS frontends. Only use a recorded, owned guest. Existing hostname/port/configuration drift is refused, not overwritten; intentionally migrating an existing port requires a separately reviewed change. This wrapper does not implement DNS failover or change the router. Public-first router settings remain interim pending the clarified filtering-first architecture.

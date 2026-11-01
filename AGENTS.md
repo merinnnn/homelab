@@ -12,4 +12,4 @@ Report PASS/FAIL/BLOCKED/NOT RUN with evidence, separating mocks, live observati
 
 Make one Git commit per major completed repository change with a simple message. Do not add co-author trailers unless requested. Pushing and host reboots remain separate actions.
 
-Household browsing must remain independent of Pi-hole and either Proxmox node. Current router DNS is public resolvers first, Pi-hole third; network-wide filtering is best effort. Do not restore Pi-hole-only household DNS. Review docs/pihole.md and verify a bounded outage with automatic recovery before changing this policy.
+User clarification: normal household DNS must use healthy Pi-hole filtering. Public DNS is eligible only when filtering is unavailable, with automatic return to filtering after recovery. Public-first router settings are an interim state that does not satisfy this requirement. A static Pi-hole/public DNS list does not establish strict fallback. Verify filtering, outage browsing and automatic failback with bounded recovery before declaring completion.

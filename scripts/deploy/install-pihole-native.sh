@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run inside the allocated dns01 Debian 13 LXC, never on a Proxmox host.
+# Run inside the explicitly named Debian 13 DNS LXC, never on a Proxmox host.
 set +x
 set -euo pipefail
 
@@ -26,6 +26,10 @@ validate_settings() {
     PIHOLE_UPSTREAM1="${PIHOLE_UPSTREAM1:-1.1.1.1}"
     PIHOLE_UPSTREAM2="${PIHOLE_UPSTREAM2:-1.0.0.1}"
     PIHOLE_QUERY_LOGGING="${PIHOLE_QUERY_LOGGING:-true}"
+    PIHOLE_EXPECTED_HOSTNAME="${PIHOLE_EXPECTED_HOSTNAME-dns01}"
+    PIHOLE_DNS_PORT="${PIHOLE_DNS_PORT-53}"
+    [[ ${#PIHOLE_EXPECTED_HOSTNAME} -le 63 && "$PIHOLE_EXPECTED_HOSTNAME" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] || { fail 'Invalid expected short hostname'; return 1; }
+    [[ "$PIHOLE_DNS_PORT" =~ ^[1-9][0-9]{0,4}$ ]] && ((PIHOLE_DNS_PORT <= 65535)) || { fail 'Invalid DNS port'; return 1; }
     [[ "$PIHOLE_INTERFACE" =~ ^[a-zA-Z0-9_.:-]{1,15}$ ]] || { fail 'Invalid interface'; return 1; }
     [[ "$PIHOLE_LAN_CIDR" == */* ]] && ipv4 "${PIHOLE_LAN_CIDR%/*}" || { fail 'Invalid LAN CIDR'; return 1; }
     local prefix="${PIHOLE_LAN_CIDR##*/}"
@@ -37,6 +41,7 @@ validate_settings() {
 render_config() {
     cat <<EOF
 [dns]
+port = $PIHOLE_DNS_PORT
 upstreams = ["$PIHOLE_UPSTREAM1", "$PIHOLE_UPSTREAM2"]
 interface = "$PIHOLE_INTERFACE"
 listeningMode = "LOCAL"
@@ -57,10 +62,13 @@ active = false
 active = false
 EOF
 }
+require_expected_hostname() {
+    [[ "$(hostname -s)" == "$PIHOLE_EXPECTED_HOSTNAME" ]] || { fail "Expected hostname $PIHOLE_EXPECTED_HOSTNAME"; return 1; }
+}
 require_guest() {
-    [[ $EUID -eq 0 ]] || { fail 'Run as root inside dns01'; return 1; }
+    [[ $EUID -eq 0 ]] || { fail 'Run as root inside the expected DNS guest'; return 1; }
     [[ "$(systemd-detect-virt --container)" == lxc ]] || { fail 'Expected an LXC guest'; return 1; }
-    [[ "$(hostname -s)" == dns01 ]] || { fail 'Expected hostname dns01'; return 1; }
+    require_expected_hostname || return 1
     # shellcheck source=/dev/null
     . /etc/os-release
     [[ "$ID" == debian && "$VERSION_ID" == 13 ]] || { fail 'Expected Debian 13'; return 1; }
@@ -92,6 +100,7 @@ verify_existing() {
     [[ "$("$FTL_BIN" --config webserver.port)" == '80,443s' ]] || { fail 'Expected web listeners are not configured; inspect partial install'; return 1; }
     [[ "$("$FTL_BIN" --config dns.listeningMode)" == LOCAL ]] || { fail 'Expected local-origin DNS policy'; return 1; }
     [[ "$("$FTL_BIN" --config dns.interface)" == "$PIHOLE_INTERFACE" ]] || { fail 'DNS interface differs from expected'; return 1; }
+    [[ "$("$FTL_BIN" --config dns.port)" == "$PIHOLE_DNS_PORT" ]] || { fail 'DNS port differs from expected; configuration preserved'; return 1; }
     [[ "$("$FTL_BIN" --config webserver.acl)" == "+127.0.0.1,+$PIHOLE_LAN_CIDR" ]] || { fail 'Web LAN ACL differs from expected'; return 1; }
     systemctl is-active --quiet pihole-FTL || return 1
     printf 'Existing Pi-hole verified; configuration, password and databases preserved.\n'

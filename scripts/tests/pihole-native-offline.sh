@@ -3,6 +3,7 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 DEPLOY_SCRIPT="$(cd -- "$SCRIPT_DIR/../deploy" && pwd)/install-pihole-native.sh"
+HOST_WRAPPER="$(cd -- "$SCRIPT_DIR/../deploy" && pwd)/proxmox-pihole.sh"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/pihole-native-test.XXXXXX")"
 trap 'rm -rf -- "$WORK"' EXIT
 mkdir "$WORK/bin"
@@ -60,6 +61,7 @@ case "$*" in
     '--config webserver.port') [[ ! -f "$FIXTURE/web-enabled" ]] || echo '80,443s' ;;
     '--config dns.listeningMode') [[ "$MOCK_MODE" != policy_drift ]] && echo LOCAL || echo ALL ;;
     '--config dns.interface') echo eth0 ;;
+    '--config dns.port') [[ "$MOCK_MODE" != port_drift ]] && cat "$FIXTURE/dns-port" || echo 5300 ;;
     '--config webserver.acl') echo '+127.0.0.1,+192.168.1.0/24' ;;
     '--config webserver.port 80,443s') touch "$FIXTURE/web-enabled" ;;
     *) exit 1 ;;
@@ -77,6 +79,7 @@ printf '%s' "$first" | sha256sum > "$FIXTURE/password.digest"
 printf 'Password updated\n'
 PIHOLE
 chmod +x "$FIXTURE/ftl" "$FIXTURE/pihole"
+sed -n 's/^port = \([0-9][0-9]*\)$/\1/p' "$FIXTURE/config/pihole.toml" > "$FIXTURE/dns-port"
 MOCK
 cat > "$WORK/driver" <<'DRIVER'
 #!/usr/bin/env bash
@@ -92,7 +95,7 @@ WEB_REPO="$FIXTURE/web"
 require_guest() { return 0; }
 main "${MODE:---install}"
 DRIVER
-export DEPLOY_SCRIPT
+export DEPLOY_SCRIPT HOST_WRAPPER
 export PIHOLE_EXPECTED_CORE=v6.5 PIHOLE_EXPECTED_WEB=v6.6.1 PIHOLE_EXPECTED_FTL=v6.8
 export PIHOLE_INSTALLER_COMMIT=f503a65d3a07cb71fd931389f1d3babf718249aa
 export PIHOLE_INSTALLER_FILE="$WORK/installer"
@@ -109,10 +112,29 @@ expect_fail() { local status=0; invoke "${1-FixturePassword_OnlyForTests42}" || 
 no_secret_output() { ! grep -R -F 'FixturePassword_OnlyForTests42' "$FIXTURE"; }
 assert 'deploy script parses' bash -n "$DEPLOY_SCRIPT"
 assert 'regression script parses' bash -n "${BASH_SOURCE[0]}"
+assert 'host wrapper parses' bash -n "$HOST_WRAPPER"
 bash "$DEPLOY_SCRIPT" --render-config > "$WORK/config.toml"
 assert 'v6 preseed disables Pi-hole DHCP' bash -c 'grep -A1 "^\[dhcp\]" "$1" | grep -q "active = false"' _ "$WORK/config.toml"
 assert 'web is disabled before password setup' grep -q '^port = ""$' "$WORK/config.toml"
 assert 'DNS uses local-origin mode' grep -q '^listeningMode = "LOCAL"$' "$WORK/config.toml"
+assert 'default DNS port is explicitly rendered as 53' grep -q '^port = 53$' "$WORK/config.toml"
+assert 'DNS port 5353 is explicitly rendered' bash -c 'PIHOLE_DNS_PORT=5353 bash "$1" --render-config | grep -q "^port = 5353$"' _ "$DEPLOY_SCRIPT"
+assert 'dns02 is an accepted explicit hostname' bash -c 'PIHOLE_EXPECTED_HOSTNAME=dns02 bash "$1" --render-config >/dev/null' _ "$DEPLOY_SCRIPT"
+assert 'old host-wrapper two-argument invocation defaults to dns01 port 53' bash -c 'source "$1"; validate_arguments 100 /external/password; [[ "$VMID" == 100 && "$EXPECTED_HOSTNAME" == dns01 && "$DNS_PORT" == 53 ]]' _ "$HOST_WRAPPER"
+assert 'host wrapper accepts dns02 and port 5353' bash -c 'source "$1"; validate_arguments 101 /external/password dns02 5353; [[ "$EXPECTED_HOSTNAME" == dns02 && "$DNS_PORT" == 5353 ]]' _ "$HOST_WRAPPER"
+assert 'host wrapper accepts dns02 with default port 53' bash -c 'source "$1"; validate_arguments 101 /external/password dns02; [[ "$EXPECTED_HOSTNAME" == dns02 && "$DNS_PORT" == 53 ]]' _ "$HOST_WRAPPER"
+for invalid_host in '' '-dns02' 'dns02-' 'dns.02' 'dns"02' 'DNS02' "$(printf 'a%.0s' {1..64})"; do
+    assert "guest rejects invalid hostname [$invalid_host]" bash -c '! PIHOLE_EXPECTED_HOSTNAME="$2" bash "$1" --render-config >/dev/null 2>&1' _ "$DEPLOY_SCRIPT" "$invalid_host"
+    assert "host wrapper rejects invalid hostname [$invalid_host]" bash -c 'source "$1"; ! validate_arguments 101 /external/password "$2" >/dev/null 2>&1' _ "$HOST_WRAPPER" "$invalid_host"
+done
+for invalid_port in '' 0 65536 -1 053 '53;true' 999999999999999999999999999; do
+    assert "guest rejects invalid DNS port [$invalid_port]" bash -c '! PIHOLE_DNS_PORT="$2" bash "$1" --render-config >/dev/null 2>&1' _ "$DEPLOY_SCRIPT" "$invalid_port"
+    assert "host wrapper rejects invalid DNS port [$invalid_port]" bash -c 'source "$1"; ! validate_arguments 101 /external/password dns02 "$2" >/dev/null 2>&1' _ "$HOST_WRAPPER" "$invalid_port"
+done
+assert 'minimum port 1 is accepted' bash -c 'PIHOLE_DNS_PORT=1 bash "$1" --render-config | grep -q "^port = 1$"' _ "$DEPLOY_SCRIPT"
+assert 'maximum port 65535 is accepted' bash -c 'PIHOLE_DNS_PORT=65535 bash "$1" --render-config | grep -q "^port = 65535$"' _ "$DEPLOY_SCRIPT"
+assert 'hostname guard accepts the allocated dns02 identity' bash -c 'source "$1"; PIHOLE_EXPECTED_HOSTNAME=dns02; hostname() { echo dns02; }; require_expected_hostname' _ "$DEPLOY_SCRIPT"
+assert 'hostname guard refuses dns01 when dns02 is expected' bash -c 'source "$1"; PIHOLE_EXPECTED_HOSTNAME=dns02; hostname() { echo dns01; }; ! require_expected_hostname >/dev/null 2>&1' _ "$DEPLOY_SCRIPT"
 assert 'upstreams use the requested pair' grep -Fq '["1.1.1.1", "1.0.0.1"]' "$WORK/config.toml"
 assert 'render supports query logging override' bash -c 'PIHOLE_QUERY_LOGGING=false bash "$1" --render-config | grep -q "queryLogging = false"' _ "$DEPLOY_SCRIPT"
 assert 'rejects out-of-range upstream' bash -c '! PIHOLE_UPSTREAM1=999.1.1.1 bash "$1" --render-config >/dev/null 2>&1' _ "$DEPLOY_SCRIPT"
@@ -142,7 +164,21 @@ assert 'partial web rerun does not reinstall' bash -c '[[ $(wc -l < "$1/installe
 touch "$FIXTURE/web-enabled"
 export MOCK_MODE=policy_drift
 assert 'repeat refuses unsafe DNS policy drift without overwriting it' expect_fail
+export MOCK_MODE=port_drift
+assert 'repeat refuses DNS port drift' expect_fail
+assert 'DNS port drift does not reinstall' bash -c '[[ $(wc -l < "$1/installer.calls") -eq 1 ]]' _ "$FIXTURE"
+assert 'DNS port drift preserves existing configuration bytes' test "$(sha256sum "$FIXTURE/config/pihole.toml")" = "$after"
 export MOCK_MODE=healthy
+export PIHOLE_EXPECTED_HOSTNAME=dns02 PIHOLE_DNS_PORT=5353
+new_fixture dns02_5353
+assert 'fresh dns02 install with explicit port 5353 succeeds' invoke
+assert 'fresh dns02 configuration contains DNS port 5353' grep -q '^port = 5353$' "$FIXTURE/config/pihole.toml"
+assert 'repeat dns02 port 5353 verifies without changing data' invoke
+export PIHOLE_DNS_PORT=53
+assert 'expected port mismatch refuses existing dns02 data' expect_fail
+assert 'expected port mismatch does not rerun installer' bash -c '[[ $(wc -l < "$1/installer.calls") -eq 1 ]]' _ "$FIXTURE"
+assert 'expected port mismatch leaves configured 5353 intact' grep -q '^port = 5353$' "$FIXTURE/config/pihole.toml"
+unset PIHOLE_EXPECTED_HOSTNAME PIHOLE_DNS_PORT
 
 for scenario in installer_fail core_drift ftl_drift password_fail hash_missing web_unreadable; do
     new_fixture "$scenario"; export MOCK_MODE="$scenario"
