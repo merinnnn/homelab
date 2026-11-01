@@ -1,0 +1,27 @@
+destroy table inet homelab
+destroy table ip homelab_nat
+table inet homelab {
+    chain input {
+        type filter hook input priority 0; policy accept;
+        ct state established,related accept
+        iifname "vmbr1" udp dport 67 accept
+        iifname "vmbr1" ip daddr 10.0.10.1 udp dport 53 accept
+        iifname "vmbr1" ip daddr 10.0.10.1 tcp dport 53 accept
+        iifname "vmbr1" ip daddr 10.0.10.1 ip protocol icmp accept
+        iifname "vmbr1" drop
+    }
+    chain forward {
+        type filter hook forward priority 0; policy accept;
+        iifname "vmbr1" oifname "vmbr0" ip daddr 192.168.1.0/24 drop
+        iifname "vmbr1" oifname "vmbr0" ip saddr 10.0.10.0/24 ct state new,established,related accept
+        iifname "vmbr0" oifname "vmbr1" ip daddr 10.0.10.0/24 ct state established,related accept
+        iifname "vmbr1" drop
+        oifname "vmbr1" drop
+    }
+}
+table ip homelab_nat {
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        iifname "vmbr1" oifname "vmbr0" ip saddr 10.0.10.0/24 masquerade
+    }
+}

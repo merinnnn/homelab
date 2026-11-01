@@ -42,45 +42,12 @@ EOF
 
 sysctl -w net.ipv4.ip_forward=1
 
-# NAT + block lab -> main LAN
-cp -an /etc/nftables.conf /etc/nftables.conf.pre-homelab
-
-cat > /etc/nftables.conf <<EOF
-#!/usr/sbin/nft -f
-
-flush ruleset
-
-table inet homelab {
-    chain input {
-        type filter hook input priority 0; policy accept;
-
-        ct state established,related accept
-
-        iifname "$LAB_BRIDGE" udp dport { 53, 67 } accept
-        iifname "$LAB_BRIDGE" tcp dport 53 accept
-        iifname "$LAB_BRIDGE" ip daddr $LAB_IP ip protocol icmp accept
-        iifname "$LAB_BRIDGE" drop
-    }
-
-    chain forward {
-        type filter hook forward priority 0; policy accept;
-
-        iifname "$LAB_BRIDGE" oifname "$UPLINK" ip daddr $MAIN_NET drop
-    }
-}
-
-table ip homelab_nat {
-    chain postrouting {
-        type nat hook postrouting priority srcnat; policy accept;
-
-        iifname "$LAB_BRIDGE" oifname "$UPLINK" ip saddr $LAB_NET masquerade
-    }
-}
-EOF
-
-nft -c -f /etc/nftables.conf
-nft -f /etc/nftables.conf
-systemctl enable nftables
+# Runtime NAT and isolation; only the project-owned tables are replaced.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+LAB_BRIDGE="$LAB_BRIDGE" LAB_IP="$LAB_IP" LAB_NET="$LAB_NET" \
+UPLINK="$UPLINK" MAIN_NET="$MAIN_NET" \
+    bash "$SCRIPT_DIR/apply-lab-firewall.sh" --apply
+echo "Boot firewall persistence requires reviewed integration; see docs/firewall.md."
 
 # DHCP + DNS for lab
 apt-get update
@@ -105,7 +72,7 @@ systemctl enable --now dnsmasq
 systemctl restart dnsmasq
 
 echo
-echo "Network setup complete."
+echo "Network runtime setup complete; firewall persistence still requires reviewed integration."
 echo "$LAB_BRIDGE: $LAB_ADDR"
 echo "DHCP: $DHCP_START - $DHCP_END"
 echo "Uplink: $UPLINK"
