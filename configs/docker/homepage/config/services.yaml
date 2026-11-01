@@ -25,3 +25,8 @@
         icon: mdi-lock-outline
         href: https://vault.home.arpa/
         description: Your password vault
+- Monitoring:
+    - Grafana:
+        href: https://grafana.home.arpa/
+        description: Node CPU, memory, disk and alerts
+        icon: mdi-chart-line

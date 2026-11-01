@@ -1,0 +1,96 @@
+services:
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:?A resolved Prometheus digest is required}
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=3GB
+    restart: unless-stopped
+    mem_limit: 768m
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - "${MONITORING_STACK_DIR:?An absolute stack directory is required}/current/prometheus:/etc/prometheus:ro"
+      - prometheus-data:/prometheus
+    networks:
+      default:
+      proxy:
+        aliases: [homelab-prometheus]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: &logs
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  alertmanager:
+    image: ${ALERTMANAGER_IMAGE:?A resolved Alertmanager digest is required}
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+    restart: unless-stopped
+    mem_limit: 128m
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - "${MONITORING_PRIVATE_DIR:?A private runtime directory is required}/alertmanager.container.yml:/etc/alertmanager/alertmanager.yml:ro"
+      - alertmanager-data:/alertmanager
+    networks:
+      default:
+      proxy:
+        aliases: [homelab-alertmanager]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9093/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging: *logs
+
+  grafana:
+    image: ${GRAFANA_IMAGE:?A resolved Grafana digest is required}
+    restart: unless-stopped
+    mem_limit: 512m
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      GF_SERVER_ROOT_URL: https://grafana.home.arpa
+      GF_SERVER_DOMAIN: grafana.home.arpa
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/nodes.json
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - "${MONITORING_STACK_DIR}/current/grafana/provisioning:/etc/grafana/provisioning:ro"
+      - "${MONITORING_STACK_DIR}/current/grafana/dashboards:/var/lib/grafana/dashboards:ro"
+      - "${MONITORING_PRIVATE_DIR}/grafana-admin-password.container:/run/secrets/grafana-admin-password:ro"
+    networks:
+      default:
+      proxy:
+        aliases: [homelab-grafana]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+    logging: *logs
+
+networks:
+  proxy:
+    external: true
+    name: homelab-proxy_default
+
+volumes:
+  prometheus-data:
+    name: homelab-prometheus-data
+  alertmanager-data:
+    name: homelab-alertmanager-data
+  grafana-data:
+    name: homelab-grafana-data

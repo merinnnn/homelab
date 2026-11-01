@@ -20,12 +20,13 @@
     <p>Your services, in one place.</p>
     <nav aria-label="Home lab services">
       <ul>
+        <li><a href="https://grafana.@DOMAIN@/"><strong>Grafana</strong><span>Node usage and alerts</span></a></li>
         <li><a href="https://home.@DOMAIN@/"><strong>Homepage</strong><span>Your home dashboard</span></a></li>
         <li><a href="https://vault.@DOMAIN@/"><strong>Vaultwarden</strong><span>Your password vault</span></a></li>
-        <li><a href="https://pve01.@DOMAIN@/"><strong>Proxmox · pve01</strong><span>Manage the first node</span></a></li>
-        <li><a href="https://pve02.@DOMAIN@/"><strong>Proxmox · pve02</strong><span>Manage the second node</span></a></li>
-        <li><a href="https://pihole01.@DOMAIN@/admin/"><strong>Pi-hole · primary</strong><span>Filtering and DNS activity</span></a></li>
-        <li><a href="https://pihole02.@DOMAIN@/admin/"><strong>Pi-hole · secondary</strong><span>Filtering and DNS activity</span></a></li>
+        <li><a href="https://pve01.@DOMAIN@/"><strong>Proxmox Â· pve01</strong><span>Manage the first node</span></a></li>
+        <li><a href="https://pve02.@DOMAIN@/"><strong>Proxmox Â· pve02</strong><span>Manage the second node</span></a></li>
+        <li><a href="https://pihole01.@DOMAIN@/admin/"><strong>Pi-hole Â· primary</strong><span>Filtering and DNS activity</span></a></li>
+        <li><a href="https://pihole02.@DOMAIN@/admin/"><strong>Pi-hole Â· secondary</strong><span>Filtering and DNS activity</span></a></li>
         <li><a href="https://uptime.@DOMAIN@/"><strong>Uptime Kuma</strong><span>Service monitoring</span></a></li>
       </ul>
     </nav>

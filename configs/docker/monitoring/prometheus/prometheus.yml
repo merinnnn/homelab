@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  external_labels:
+    homelab: home
+rule_files:
+  - /etc/prometheus/node-alerts.yml
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+scrape_configs:
+  - job_name: proxmox-nodes
+    scrape_timeout: 10s
+    static_configs:
+      - targets: [192.168.1.2:9100]
+        labels:
+          node: pve01
+      - targets: [192.168.1.3:9100]
+        labels:
+          node: pve02
+  - job_name: prometheus
+    static_configs:
+      - targets: [127.0.0.1:9090]

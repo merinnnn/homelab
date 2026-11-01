@@ -57,3 +57,8 @@ vault.@DOMAIN@ {
     tls internal
     reverse_proxy http://homelab-vaultwarden:80
 }
+
+grafana.@DOMAIN@ {
+    tls internal
+    reverse_proxy http://homelab-grafana:3000
+}

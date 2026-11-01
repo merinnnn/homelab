@@ -22,6 +22,11 @@ jobs:
 
       - name: Validate Docker Compose files
         env:
+          PROMETHEUS_IMAGE: prom/prometheus:v3.15.1
+          GRAFANA_IMAGE: grafana/grafana:13.3.0
+          ALERTMANAGER_IMAGE: prom/alertmanager:v0.34.2
+          MONITORING_STACK_DIR: /opt/homelab/monitoring
+          MONITORING_PRIVATE_DIR: /etc/homelab/monitoring
           HOMEPAGE_IMAGE: ghcr.io/gethomepage/homepage:v2.7.0
           HOMEPAGE_STACK_DIR: /opt/homelab/homepage
           CADDY_IMAGE: caddy:2.11.7-alpine
@@ -57,3 +62,7 @@ jobs:
         run: |
           bash scripts/tests/homepage-offline.sh
           python3 scripts/tests/vaultwarden-offline.py
+
+      - name: Test node monitoring behavior
+        run: bash scripts/tests/monitoring-offline.sh
+          bash scripts/tests/node-exporter-offline.sh

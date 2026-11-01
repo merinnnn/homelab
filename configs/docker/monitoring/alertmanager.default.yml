@@ -1,0 +1,13 @@
+# Deliberately no external delivery until the user chooses/configures a channel.
+route:
+  receiver: pending-channel
+  group_by: [alertname, node, instance]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+receivers:
+  - name: pending-channel
+inhibit_rules:
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: [instance, mountpoint]

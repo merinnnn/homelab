@@ -1,0 +1,46 @@
+groups:
+  - name: proxmox-nodes
+    rules:
+      - alert: NodeDown
+        expr: up{job="proxmox-nodes"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.node }} exporter is unavailable"
+          description: "The node exporter has not responded for two minutes. Check the node and the monitoring path."
+      - alert: NodeHighCPU
+        expr: 100 * (1 - avg by (instance, node) (rate(node_cpu_seconds_total{job="proxmox-nodes",mode="idle"}[5m]))) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.node }} CPU usage is above 90%"
+      - alert: NodeLowMemory
+        expr: node_memory_MemAvailable_bytes{job="proxmox-nodes"} / node_memory_MemTotal_bytes{job="proxmox-nodes"} < 0.10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.node }} has less than 10% available RAM"
+      - alert: NodeLowDiskSpace
+        expr: (node_filesystem_avail_bytes{job="proxmox-nodes",fstype!~"tmpfs|devtmpfs|overlay|squashfs|proc|sysfs|nsfs"} / node_filesystem_size_bytes{job="proxmox-nodes",fstype!~"tmpfs|devtmpfs|overlay|squashfs|proc|sysfs|nsfs"} < 0.15) and on (instance, device, mountpoint) (node_filesystem_readonly{job="proxmox-nodes"} == 0)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.node }} {{ $labels.mountpoint }} has less than 15% disk space"
+      - alert: NodeCriticalDiskSpace
+        expr: (node_filesystem_avail_bytes{job="proxmox-nodes",fstype!~"tmpfs|devtmpfs|overlay|squashfs|proc|sysfs|nsfs"} / node_filesystem_size_bytes{job="proxmox-nodes",fstype!~"tmpfs|devtmpfs|overlay|squashfs|proc|sysfs|nsfs"} < 0.05) and on (instance, device, mountpoint) (node_filesystem_readonly{job="proxmox-nodes"} == 0)
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.node }} {{ $labels.mountpoint }} has less than 5% disk space"
+      - alert: NodeFailedManagementService
+        expr: node_systemd_unit_state{job="proxmox-nodes",state="failed",name=~"pveproxy.service|pvedaemon.service|pvestatd.service|pvescheduler.service"} == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.node }} service {{ $labels.name }} has failed"
