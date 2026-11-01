@@ -1,6 +1,6 @@
 # Node monitoring
 
-Live status â€” 1 November 2026: both node targets UP; 37 read-only/authentication checks PASS; native config/six rule scenarios PASS; real bounded exporter outage fired in Prometheus/Alertmanager and resolved after restoration. Telegram API accepted a planned firing at 21:22:10 UTC and recovery at 21:27:10 UTC with zero integration failures. apps01 now has3 GiB RAM;44 guest and 3 host persistence checks PASS after graceful VM restart, with earlier metric history retained. All 9 Windows HTTPS/default-trust checks and 10 household DNS/filtering/internet checks PASS. These counts are separate scopes, not unique test totals.
+Live status — 1 November 2026: both node targets UP; 37 read-only/authentication checks PASS; native config/six rule scenarios PASS; real bounded exporter outage fired in Prometheus/Alertmanager and resolved after restoration. Telegram API accepted a planned firing at 21:22:10 UTC and recovery at 21:27:10 UTC with zero integration failures. apps01 now has 3 GiB RAM; 44 guest and 3 host persistence checks PASS after graceful VM restart, with earlier metric history retained. All 9 Windows HTTPS/default-trust checks and 10 household DNS/filtering/internet checks PASS. These counts are separate scopes, not unique test totals.
 
 Grafana credentials are in the existing private desktop services store and root-only VM runtime file. Telegram input was moved outside Git before use; its token/chat remain only in private runtime stores. No secret values are in this document.
 

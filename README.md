@@ -13,7 +13,7 @@ Both nodes run Proxmox VE 9.2.20 as observed on 1 November 2026. `vmbr0` connect
 
 Pi-hole runs in dns01 on pve01 at static 192.168.1.210 and dns02 on pve02 at static 192.168.1.150. Docker/Uptime Kuma, Caddy, Vaultwarden, Homepage and Prometheus/Grafana/Alertmanager run in apps01 on pve02 at static 192.168.1.58. All guests have matching router reservations and onboot enabled. Both Pi-holes and apps01 passed guest reboot/static-network recovery checks.
 
-New services: [Homepage](https://home.home.arpa/), [Vaultwarden](https://vault.home.arpa/), [Grafana node monitoring](https://grafana.home.arpa/). Telegram firing/recovery delivery and apps01 restart persistence passed. apps01 now has3 GiB RAM. See [monitoring](docs/monitoring.md) and [vault/dashboard](docs/vault-and-homepage.md).
+New services: [Homepage](https://home.home.arpa/), [Vaultwarden](https://vault.home.arpa/), [Grafana node monitoring](https://grafana.home.arpa/). Telegram firing/recovery delivery and apps01 restart persistence passed. apps01 now has 3 GiB RAM. See [monitoring](docs/monitoring.md) and [vault/dashboard](docs/vault-and-homepage.md).
 
 Friendly HTTPS addresses: [pve01](https://pve01.home.arpa/), [pve02](https://pve02.home.arpa/), [Pi-hole 1](https://pihole01.home.arpa/), [Pi-hole 2](https://pihole02.home.arpa/), [Uptime Kuma](https://uptime.home.arpa/), [service links](https://proxy.home.arpa/). These require local DNS and trust in the public Caddy root certificate; see [local service access](docs/local-access.md) for client setup and current verification limits. The Windows home.arpa DNS rule is installed; the public Caddy root is trusted by the current Windows user and all nine normal HTTPS checks pass. Other devices are not automatically configured.
 

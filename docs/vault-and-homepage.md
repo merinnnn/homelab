@@ -14,7 +14,7 @@ bash scripts/deploy/proxmox-reverse-proxy.sh 100 home.arpa /etc/homelab/proxy-tr
 
 Apply configs/local-services.json to both Pi-holes with proxmox-local-dns.sh. Existing Windows suffix-only NRPT and public-root trust cover the new names; other clients still need their own DNS/trust setup. Router AdGuard-first DNS and existing service IPs stay unchanged.
 
-Homepage: https://home.home.arpa/ â€” static service cards, no API credentials/Docker socket, explicit host allowlist, managed read-only config. Vaultwarden: https://vault.home.arpa/ â€” Bitwarden-compatible web vault. Both images resolve their reviewed release tags to immutable digests; repeat deployments retain the pin and protect unknown configurations/data.
+Homepage: https://home.home.arpa/ — static service cards, no API credentials/Docker socket, explicit host allowlist, managed read-only config. Vaultwarden: https://vault.home.arpa/ — Bitwarden-compatible web vault. Both images resolve their reviewed release tags to immutable digests; repeat deployments retain the pin and protect unknown configurations/data.
 
 Vaultwarden registrations and organization invitations are disabled. The admin can invite the one owner through private runtime input without SMTP; no email message is sent. The owner completes registration directly at https://vault.home.arpa/#/signup using the exact invited email and a self-chosen master password. Never enter the master password in chat, scripts or notes. The admin token is separate from that master password.
 

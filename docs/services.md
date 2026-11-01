@@ -1,4 +1,4 @@
-# Running services â€” 1 November 2026
+# Running services — 1 November 2026
 
 Deployments run from `/root/homelab` on each Proxmox host. Both checkouts contain the deployment scripts; guest payloads come from that checkout. Authentication uses normal host configuration. No personal identity material, identity filenames or desktop paths are embedded in scripts.
 
