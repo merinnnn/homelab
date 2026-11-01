@@ -1,6 +1,6 @@
 # Setup status — 1 November 2026
 
-This records observed setup and test results. It does not declare production services deployed.
+This records the earlier prepared-node validation. Pi-hole and Docker/Uptime Kuma have since been deployed and verified; see [running services](services.md) for current resources, endpoints and deployment checks. Earlier empty inventories refer to the pre-deployment baseline.
 
 ## Observed nodes and source
 

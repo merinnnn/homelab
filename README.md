@@ -11,7 +11,7 @@ Proxmox automation for two standalone mini PCs, with Debian VM/LXC creation and 
 
 Both nodes run Proxmox VE 9.2.20 as observed on 1 November 2026. `vmbr0` connects to the home LAN through the RE220/switch. Each node's `vmbr1` is a separate internal bridge with dnsmasq DHCP/DNS and host NAT; matching bridge names/subnets do not connect guests across nodes. Nodes are managed independently.
 
-The initial inventory for the November validation run contained no VMs or containers. Pi-hole, Docker, Portainer and Uptime Kuma are **planned**, not verified deployments. Compose examples exist, but this repository currently has no service deployment scripts. See [setup status](docs/setup-status.md) for current test evidence and remaining work.
+Pi-hole is running in pve01 dns01 at http://192.168.1.210/admin/. Docker and Uptime Kuma are running in pve02 apps01 at http://192.168.1.58:3001. Both use router-assigned DHCP addresses and have passed guest-reboot checks. Portainer remains planned. See [running services](docs/services.md) and [node-local deployment](docs/deployment.md).
 
 ## Scripts
 

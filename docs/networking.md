@@ -29,6 +29,6 @@ See [firewall maintenance](firewall.md) before changing host rules. The full net
 
 ## Planned services
 
-Pi-hole (`192.168.1.53`), Docker (`192.168.1.54`), Portainer and Uptime Kuma are planned addresses/services, not verified current deployments. Their Compose examples are configuration inputs. Do not change home-router DNS until Pi-hole is deployed and verified from intended clients.
+Pi-hole now runs in dns01 at DHCP address `192.168.1.210`; Docker/Uptime Kuma run in apps01 at DHCP address `192.168.1.58`. The old .53/.54 assignments were not used because the router pool is unknown. Portainer remains planned. See [running services](services.md). Home-router DNS remains unchanged; create reservations before relying on fixed endpoints.
 
 Historical extender MAC-passthrough and throughput claims were not retested in this run. See [setup status](setup-status.md) and the local Obsidian reports for evidence and limits.
