@@ -49,4 +49,8 @@ Deploy from /root/homelab on the appropriate node; see [deployment commands](dep
 
 If DNS fails, reach the router by IP192.168.1.1 or Proxmox by IP192.168.1.2/.3. To temporarily remove local resolvers while preserving public filtering, replace DNS2 with AdGuard’s other default address94.140.15.15 and DNS3 with0.0.0.0, retaining DNS1. To restore original ISP automatic DNS, set all fields to0.0.0.0 and Apply; this relinquishes the configured filtering policy. Keep reservations. Do not restore Pi-hole-only household DNS without a design that survives both nodes being off.
 
-Off-node backups, restore testing and the apps01 .58 reservation remain separate work. See [running services](services.md). No host reboot, router replacement or firmware flashing was performed.
+Off-node backups and restore testing remain separate work. apps01 .58 is now reserved and static, as are both Pi-hole guest addresses. See [running services](services.md). No host reboot, router replacement or firmware flashing was performed.
+
+## Private local names
+
+Both Pi-holes now serve the identical home.arpa records defined in configs/local-services.json. This Windows client routes only that suffix to the Pi-holes using NRPT; public queries still use the existing router/AdGuard path. Other devices require their own local DNS setup. The Caddy reverse proxy is not part of household internet DNS. See [local service access](local-access.md); do not change router resolver order to make private names resolve.

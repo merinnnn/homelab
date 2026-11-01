@@ -29,8 +29,14 @@ See [firewall maintenance](firewall.md) before changing host rules. The full net
 
 ## Household services and DNS
 
-Pi-hole runs in dns01 at reserved 192.168.1.210 on pve01 and dns02 at reserved 192.168.1.150 on pve02. Docker/Uptime Kuma runs in apps01 at observed DHCP address192.168.1.58; its reservation remains open. All use vmbr0. The proposed .53/.54 statics were not used. Router DHCP pool is .10-.254 with 1440-minute leases. Portainer remains planned.
+Pi-hole runs in dns01 at reserved 192.168.1.210 on pve01 and dns02 at reserved 192.168.1.150 on pve02. Docker/Uptime Kuma and Caddy run in apps01 at static/reserved192.168.1.58. dns01/dns02 now also use static guest configuration at their reserved IPs. All use vmbr0. The proposed .53/.54 statics were not used. Router DHCP pool is .10-.254 with 1440-minute leases. Portainer remains planned.
 
 Router DNS1 is AdGuard filtered public94.140.14.14, DNS2 dns01.210 and DNS3 dns02.150. All configured choices filter ads; AdGuard may answer while nodes are healthy and uses a different blocklist. The user accepted this tradeoff to retain filtered DNS/browsing when both nodes stay off. This is not strict health-based Pi-hole-first failover. Ten normal and ten both-container-outage DNS/ad-block/HTTPS checks passed. Both guests were restored; no physical host/router power cycle was performed. See [running services](services.md) and [DNS evidence, limits and rollback](pihole.md).
 
 Historical extender MAC-passthrough and throughput claims were not retested in this run. See [setup status](setup-status.md) and the local Obsidian reports for evidence and limits.
+
+## Local service names
+
+Local service access, 1 November 2026: all three service guests now have static IPv4 configuration at their existing IPs (.210/.150/.58), with matching saved router reservations. Both Proxmox hosts remain static at .2/.3. Caddy on apps01 provides home.arpa HTTPS web names. Both Pi-holes hold identical local records; this Windows client has a home.arpa-only NRPT rule using them, preserving router DNS and the two Tailscale policies. Other devices need local DNS and public-root trust configured separately. Caddy is a single proxy on pve02; direct IP/port access remains the recovery path. Household internet DNS remains AdGuard-first and independent of the proxy/nodes.
+
+See [local service access](local-access.md) for the name/address map, scoped Windows client setup, internal certificate authority, deployment and rollback. Private home.arpa records are not published by AdGuard or automatically served by the router; do not claim universal device resolution.

@@ -7,16 +7,30 @@ Deployments run from `/root/homelab` on each Proxmox host. Both checkouts contai
 | Uptime Kuma 2.5.8 | pve02 VM100, apps01 | http://192.168.1.58:3001 | Local named Docker volume homelab-uptime-kuma-data |
 | Pi-hole Core v6.5 / Web v6.6.1 / FTL v6.8 | pve01 CT100, dns01 | http://192.168.1.210/admin/ ; DNS 192.168.1.210 TCP/UDP 53 | Native guest configuration/databases under /etc/pihole |
 | Pi-hole Core v6.5 / Web v6.6.1 / FTL v6.8 | pve02 CT101, dns02 | http://192.168.1.150/admin/ ; DNS 192.168.1.150 TCP/UDP 53 | Native guest configuration/databases under /etc/pihole |
+| Caddy 2.11.7 reverse proxy | pve02 VM100, apps01 | https://proxy.home.arpa/ and the five service names below, LAN ports80/443 | Persistent homelab-caddy-data/config named volumes |
 
 apps01 has 2 vCPU, 2 GiB RAM and a 32 GiB disk. dns01 and dns02 are each an unprivileged Debian 13 LXC with 1 vCPU, 512 MiB RAM and an 8 GiB disk. Debian systemd requires nesting enabled in this LXC. All three guests start automatically and are permanent resources, not old test guests.
 
 ## Addressing and access
 
-All three guests use router DHCP on vmbr0. The router pool is .10-.254 with a 1440-minute lease. Both Pi-holes have verified .210/.150 reservations; apps01 still needs its lease reserved:
+All three guests use static IPv4 configuration on vmbr0, gateway/OS DNS192.168.1.1. Matching DHCP reservations prevent the router pool from assigning their addresses elsewhere. The router pool remains .10-.254, 1440-minute leases:
 
-- apps01: BC:24:11:B4:7E:DA, observed 192.168.1.58.
-- dns01: BC:24:11:42:2A:6F, reserved 192.168.1.210; retained after reboot.
-- dns02: BC:24:11:6F:74:55, reserved 192.168.1.150; retained after controlled shutdown/start.
+- apps01: BC:24:11:B4:7E:DA, static/reserved192.168.1.58.
+- dns01: BC:24:11:42:2A:6F, static/reserved192.168.1.210.
+- dns02: BC:24:11:6F:74:55, static/reserved192.168.1.150.
+
+All three retained static networking after guest reboot; repeat migration checks passed. Proxmox .2/.3 were already static. No OS/Proxmox node identity was renamed.
+
+| Service | Static backend IP | Friendly address |
+| --- | --- | --- |
+| Proxmox pve01 | 192.168.1.2 | https://pve01.home.arpa/ |
+| Proxmox pve02 | 192.168.1.3 | https://pve02.home.arpa/ |
+| Pi-hole dns01 | 192.168.1.210 | https://pihole01.home.arpa/ |
+| Pi-hole dns02 | 192.168.1.150 | https://pihole02.home.arpa/ |
+| Uptime Kuma apps01 | 192.168.1.58 | https://uptime.home.arpa/ |
+| Service links / Caddy | 192.168.1.58 | https://proxy.home.arpa/ |
+
+Web names point to proxy .58. Direct node01/node02.home.arpa names point to .2/.3, dns01/dns02.home.arpa to .210/.150, apps01.home.arpa to .58. Existing SSH aliases remain unchanged. Both Pi-holes have the records; Windows resolves home.arpa through a scoped NRPT rule while internet DNS continues through router .1. Other devices need local DNS and public Caddy root trust. This Windows certificate import requires its security dialog to complete; browser trust is a separate check from explicit-CA HTTPS probes. See [local access deployment and limits](local-access.md).
 
 The proposed .53/.54 addresses were not assigned. Router DHCP remains enabled. DNS1 is AdGuard filtered public 94.140.14.14; DNS2/3 are Pi-hole .210/.150. Ten baseline and ten both-Pi-hole-container-outage checks passed through normal desktop/router DNS, including fresh ad blocking and HTTPS. AdGuard can answer even when nodes are healthy and uses its own list; this accepted compromise does not promise exclusive Pi-hole-first selection. See [DNS configuration, evidence and limits](pihole.md). Public port forwarding was not changed. Portainer is not deployed.
 
@@ -36,4 +50,10 @@ Latest affected source checks passed: 43 general behavior cases, 95 native Pi-ho
 
 ## Remaining work
 
-Reserve the apps01 lease, configure off-node backups and test restore. Both Pi-holes have 76,737 gravity entries, working direct DNS/auth/web access and restart recovery. dns02 FTL/cron are active/enabled; both onboot flags are set. Both DNS services were absent during the successful client outage test; hosts/router were not powered off. Host/router cold boot, live IPv6 routing/isolation and automatic address-change handling were not tested. Kuma retains its existing three monitors; dns02 has no added monitor yet. The broad health scripts include a planned Portainer target, so use explicit target overrides. Legacy Docker Pi-hole examples are not the native deployment used here.
+Configure off-node backups and test restore. Complete local DNS/public-root trust on any additional client devices. Both Pi-holes have 76,737 gravity entries, working direct DNS/auth/web access and restart recovery. dns02 FTL/cron are active/enabled; both onboot flags are set. Both DNS services were absent during the successful client outage test; hosts/router were not powered off. Host/router cold boot, live IPv6 routing/isolation and automatic address-change handling were not tested; these services now use static addresses. Kuma retains its existing three monitors; dns02 has no added monitor yet. The broad health scripts include a planned Portainer target, so use explicit target overrides. Legacy Docker Pi-hole examples are not the native deployment used here.
+
+## Reverse proxy verification
+
+Caddy is pinned to caddy@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5. Actual Linux Caddy/Compose validation passed. All six HTTPS pages and HTTP308 redirects passed through actual Windows DNS with explicit public-CA verification; Schannel required best-effort handling for the private CA's missing CRL. Proxy-side CA/hostname validation of both Proxmox upstreams remains enabled.
+
+Independent functional checks passed both proxied Pi-hole logins/statistics/anonymous denial/session cleanup and Kuma authenticated WebSocket-only access to its existing three monitors, with fresh UP heartbeats. Source checks passed31 reverse-proxy,27 static-input/parser and6 local-DNS cases,21 shell syntax checks and29-file identity audit. Repeated proxy application retained its image/CA/data; a deliberately invalid isolated candidate was rejected before activation while the current proxy remained healthy. apps01 reboot recovered static networking, Caddy/Kuma and the unchanged CA. Both Proxmox nodes passed authenticated API access and actual console WebSocket authentication/display checks; no shell input was entered. Final client trust status is recorded in the latest vault report.

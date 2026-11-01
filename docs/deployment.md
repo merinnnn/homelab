@@ -10,11 +10,11 @@ As created on 1 November 2026:
 
 | Node | Guest | Resources | Network |
 | --- | --- | --- | --- |
-| pve02 | VM 100, apps01 | 2 vCPU, 2 GiB RAM, 32 GiB disk | vmbr0, DHCP; observed 192.168.1.58 |
-| pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; reserved 192.168.1.210 |
-| pve02 | CT 101, dns02 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; reserved 192.168.1.150 |
+| pve02 | VM 100, apps01 | 2 vCPU, 2 GiB RAM, 32 GiB disk | vmbr0, static/reserved 192.168.1.58 |
+| pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, static/reserved 192.168.1.210 |
+| pve02 | CT 101, dns02 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, static/reserved 192.168.1.150 |
 
-These are permanent guests, not disposable validation resources. Confirm names, ownership and addresses before running commands. Router DHCP stays enabled, pool .10-.254. Both Pi-hole reservations are saved; apps01 .58 remains an observed lease requiring reservation. Router DNS uses AdGuard filtered public94.140.14.14 first, then .210/.150. All choices filter ads; public filtering can be used while nodes are healthy. Ten normal and ten both-container-outage checks passed. See [DNS evidence and limits](pihole.md). Both nodes may remain off without being a required DNS dependency.
+These are permanent guests, not disposable validation resources. Confirm names, ownership and addresses before running commands. Router DHCP stays enabled, pool .10-.254. All three service guest reservations are saved and each guest now uses static IPv4 at that address. Router DNS uses AdGuard filtered public94.140.14.14 first, then .210/.150. All choices filter ads; public filtering can be used while nodes are healthy. Ten normal and ten both-container-outage checks passed. See [DNS evidence and limits](pihole.md). Both nodes may remain off without being a required DNS dependency.
 
 ## apps01 on pve02
 
@@ -57,3 +57,7 @@ bash scripts/deploy/proxmox-pihole.sh 101 /etc/homelab/pihole-password dns02 53
 The original two-argument invocation remains dns01 on port53. The permanent dns02 also uses standard port53; no DNS frontend or port5353 service is deployed. Optional hostname/port parameters support other reviewed deployments. Only use a recorded, owned guest. Existing hostname/port/configuration drift is refused, not overwritten. This wrapper does not change router DNS. The accepted public-filtered-primary arrangement is documented in [household DNS](pihole.md).
 
 The creation helper explicitly sets umask022 before Proxmox commands so guest configuration directories remain service-readable even when the caller uses umask077. The dns02 installation exposed this dependency: /etc mode0700 blocked _apt DNS access; repairing that guest directory to0755 allowed the official installer to complete. Private runtime files remain explicitly mode600. The regression suite tests creation under a restrictive caller umask.
+
+## Static addresses, private names and reverse proxy
+
+See [local service access](local-access.md) for the node-local migration/DNS/Caddy commands, exact IP/MAC ownership, Windows-only local DNS rule and client certificate trust setup. Both Pi-holes and apps01 passed guest reboot/static-address checks. Keep public Proxmox CA files outside Git in /etc/homelab/proxy-trust; export only the public Caddy root certificate to clients. Preserve the private Caddy data volume and direct IP/port recovery access.
