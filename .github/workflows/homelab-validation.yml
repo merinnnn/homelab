@@ -66,3 +66,6 @@ jobs:
       - name: Test node monitoring behavior
         run: bash scripts/tests/monitoring-offline.sh
           bash scripts/tests/node-exporter-offline.sh
+
+      - name: Test private Telegram receiver setup
+        run: python3 scripts/tests/telegram-offline.py

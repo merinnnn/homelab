@@ -5,6 +5,7 @@
 secrets/
 .env
 passwords.txt
+telegram.json
 
 # Temporary files
 *.tmp

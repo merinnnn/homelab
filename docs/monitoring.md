@@ -23,3 +23,14 @@ The monitoring stack depends on pve02/apps01 and household power/internet. It ca
 Validation: scripts/tests/monitoring-offline.sh; native image promtool config/rule tests; amtool private config validation; actual scrape samples, Grafana authenticated dashboard/API and anonymous denial; bounded exporter outage firing/resolution; repeat and VM restart persistence. Native tests execute before activation; failed applies restore previous releases without deleting data. Detailed dated PASS/FAIL/NOT RUN evidence is kept in the project Obsidian vault. The owner chooses any external notification channel; no tokens belong in source or notes.
 
 Exporter command on each owning node: bash scripts/provision/install-node-exporter.sh. Verify with --verify; repeats preserve the managed service and refuse unknown installations.
+
+## Telegram
+
+Prepare a root-owned mode600 JSON outside Git containing bot_token and optional positive private chat_id. If chat_id is absent, send /start privately to your bot; setup requires exactly one private chat. Run on pve02:
+
+```bash
+bash scripts/deploy/proxmox-telegram.sh 100 /etc/homelab/telegram.json
+bash scripts/deploy/proxmox-monitoring.sh 100
+```
+
+The helper verifies Telegram bot/private chat, preserves unknown configurations, saves a private previous configuration and validates the candidate with the installed pinned amtool before activation. Credentials cross QGA stdin only and never enter archive payloads, command arguments or output. Canonical private Alertmanager settings contain the receiver token and selected chat ID; the desktop/node private input files hold the token. Repeated setup preserves the same receiver. Real firing/recovery delivery still requires an observed test; setup success alone is not delivery evidence. Grafana suggested plugin preinstallation/automatic updates are disabled; the provisioned node dashboard uses bundled features.
