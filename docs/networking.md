@@ -29,6 +29,6 @@ See [firewall maintenance](firewall.md) before changing host rules. The full net
 
 ## Planned services
 
-Pi-hole now runs in dns01 at DHCP address `192.168.1.210`; Docker/Uptime Kuma run in apps01 at DHCP address `192.168.1.58`. The old .53/.54 assignments were not used because the router pool is unknown. Portainer remains planned. See [running services](services.md). Home-router DNS remains unchanged; create reservations before relying on fixed endpoints.
+Pi-hole now runs in dns01 at DHCP address `192.168.1.210`; Docker/Uptime Kuma run in apps01 at DHCP address `192.168.1.58`. The old .53/.54 assignments were not used because the router pool is unknown. Portainer remains planned. See [running services](services.md). Router DHCP pool is .10-.254 with 1440-minute leases. dns01 .210 is reserved; router DNS1 forwards to .210 and default desktop filtering was verified after a guest reboot. apps01 .58 still needs a reservation. See [Pi-hole network setup and rollback](pihole.md).
 
 Historical extender MAC-passthrough and throughput claims were not retested in this run. See [setup status](setup-status.md) and the local Obsidian reports for evidence and limits.

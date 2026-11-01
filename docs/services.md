@@ -11,12 +11,12 @@ apps01 has 2 vCPU, 2 GiB RAM and a 32 GiB disk. dns01 is an unprivileged Debian 
 
 ## Addressing and access
 
-Both guests use router DHCP on vmbr0. Current addresses were assigned by the router; the DHCP pool/reservations are unknown. Reserve these leases using the guest MACs before relying on permanent addresses:
+Both guests use router DHCP on vmbr0. The router pool is .10-.254 with a 1440-minute lease. Pi-hole has a verified .210 reservation; apps01 still needs its lease reserved:
 
 - apps01: BC:24:11:B4:7E:DA, observed 192.168.1.58.
-- dns01: BC:24:11:42:2A:6F, observed 192.168.1.210.
+- dns01: BC:24:11:42:2A:6F, reserved 192.168.1.210; retained after reboot.
 
-The old proposed addresses .53/.54 were not assigned. Router DNS/DHCP settings and public port forwarding were not changed. Pi-hole can be tested directly with its observed address before making it household DNS. Portainer is not deployed.
+The old proposed addresses .53/.54 were not assigned. Router DHCP remains enabled; its DNS1 is now .210 with DNS2/3 unset. Default desktop DNS through .1 reaches Pi-hole and blocks real ad domains. Public port forwarding was not changed. See [Pi-hole network setup and rollback](pihole.md). Portainer is not deployed.
 
 Account files are root-only and outside Git: `/etc/homelab/uptime-kuma.json` on pve02 and `/etc/homelab/pihole-password` on pve01. Use the external credential store to retrieve passwords; never paste them into scripts, notes or Git. The Kuma username is merin.
 
@@ -34,4 +34,4 @@ Source checks passed: 42 general behavior cases, 34 application cases, 47 native
 
 ## Remaining work
 
-Create router DHCP reservations, choose when to switch household DNS, configure off-node backups and test restore. Host reboot, live IPv6 routing/isolation and automatic address-change handling were not tested. The existing broad health scripts also include a planned Portainer target; use explicit target overrides and interpret undeployed-service checks accordingly. Legacy Docker Pi-hole/Portainer examples are not the native deployment used here.
+Reserve the apps01 lease, configure off-node backups and test restore. Pi-hole reservation, router DNS forwarding, a successful 76,737-domain gravity refresh and post-change reboot/default-client blocking are verified. Host reboot, live IPv6 routing/isolation and automatic address-change handling were not tested. The existing broad health scripts also include a planned Portainer target; use explicit target overrides and interpret undeployed-service checks accordingly. Legacy Docker Pi-hole/Portainer examples are not the native deployment used here.

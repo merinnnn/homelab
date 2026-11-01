@@ -13,7 +13,7 @@ As created on 1 November 2026:
 | pve02 | VM 100, apps01 | 2 vCPU, 2 GiB RAM, 32 GiB disk | vmbr0, DHCP; observed 192.168.1.58 |
 | pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; observed 192.168.1.210 |
 
-These are permanent guests, not disposable validation resources. Confirm names, ownership and current DHCP addresses before running commands. Router pool/reservations are unknown; do not assign the old planned static addresses. Household DNS and DHCP remain unchanged. Record DHCP reservations when router access is available.
+These are permanent guests, not disposable validation resources. Confirm names, ownership and current DHCP addresses before running commands. The router pool is .10-.254; do not assign unreserved static addresses inside it. dns01 now has a router reservation at .210 and verified router DNS forwarding. Router DHCP remains enabled. apps01 .58 remains an observed lease requiring reservation. See [Pi-hole network setup and rollback](pihole.md).
 
 ## apps01 on pve02
 
@@ -36,7 +36,7 @@ cd /root/homelab
 bash scripts/deploy/proxmox-pihole.sh 100 /etc/homelab/pihole-password
 ```
 
-The host downloads the official installer from a fixed source commit, verifies its SHA-256, transfers it and the repository guest payload using `pct`, and supplies the password through stdin. Pi-hole web access stays disabled until versions/password are verified. Existing configurations are verified or refused; they are not silently overwritten. Router DNS is not changed.
+The host downloads the official installer from a fixed source commit, verifies its SHA-256, transfers it and the repository guest payload using `pct`, and supplies the password through stdin. Pi-hole web access stays disabled until versions/password are verified. Existing configurations are verified or refused; they are not silently overwritten. This installation command does not change router DNS. The completed router configuration is recorded in [Pi-hole network setup](pihole.md).
 
 ## Checkout updates and evidence
 

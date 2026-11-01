@@ -35,7 +35,7 @@ This records the earlier prepared-node validation. Pi-hole and Docker/Uptime Kum
 - Cloud-init completed with no fatal errors but returned status 2 for an upstream generated scalar `user` deprecation warning (removal scheduled for cloud-init 27.2). This warning is recorded, not suppressed or represented as a clean status 0.
 - Host reboot, IPv6 routing/isolation, backup restore, storage failure, throughput and hardware stress were not tested. Guest reboot is separate from host reboot. Persistent rules were syntax-checked and loaded, not verified through host restart.
 - Only the configured home prefix is protected against lab egress; additional VPN/private networks require an explicit policy. Same-bridge guest traffic and host-originated traffic are outside this routed isolation boundary.
-- Pi-hole/Docker/Portainer/Uptime Kuma remain planned. Compose files passed configuration parsing only; application deployment/security/availability have not been validated.
+- Pi-hole, Docker and Uptime Kuma are deployed and verified as described in [running services](services.md). Pi-hole router reservation and household DNS forwarding are completed; see [Pi-hole network setup](pihole.md). Portainer remains undeployed.
 - Full post-install, storage and network bootstrap were reviewed/mocked rather than rerun on prepared nodes. Image preparation's current three-column catalogue path was mocked; existing prepared images were used for live creation.
 - Guest creation can leave a partial resource if a later import/configuration step fails. Inspect ownership and volumes before retrying or removing it.
 
