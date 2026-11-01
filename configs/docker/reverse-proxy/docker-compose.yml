@@ -1,0 +1,32 @@
+services:
+  caddy:
+    image: ${CADDY_IMAGE:?A verified image digest is required}
+    command: ["caddy", "run", "--config", "/etc/caddy/current/Caddyfile", "--adapter", "caddyfile"]
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${PROXY_BIND_IP:?A local bind address is required}:80:80"
+      - "${PROXY_BIND_IP}:443:443"
+      - "${PROXY_BIND_IP}:443:443/udp"
+    volumes:
+      - "${PROXY_STACK_DIR:?An absolute stack directory is required}:/etc/caddy:ro"
+      - caddy-data:/data
+      - caddy-config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy-data:
+    name: homelab-caddy-data
+  caddy-config:
+    name: homelab-caddy-config

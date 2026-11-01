@@ -1,0 +1,16 @@
+{
+  "domain": "home.arpa",
+  "records": {
+    "pve01.home.arpa": "192.168.1.58",
+    "pve02.home.arpa": "192.168.1.58",
+    "pihole01.home.arpa": "192.168.1.58",
+    "pihole02.home.arpa": "192.168.1.58",
+    "uptime.home.arpa": "192.168.1.58",
+    "proxy.home.arpa": "192.168.1.58",
+    "apps01.home.arpa": "192.168.1.58",
+    "dns01.home.arpa": "192.168.1.210",
+    "dns02.home.arpa": "192.168.1.150",
+    "node01.home.arpa": "192.168.1.2",
+    "node02.home.arpa": "192.168.1.3"
+  }
+}

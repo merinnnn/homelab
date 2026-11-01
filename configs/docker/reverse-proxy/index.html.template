@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home lab</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 42rem; margin: 8vh auto; padding: 1.5rem; line-height: 1.5; }
+    h1 { margin-bottom: .25rem; } p { margin-top: 0; opacity: .75; }
+    ul { list-style: none; padding: 0; display: grid; gap: .8rem; }
+    a { display: block; padding: 1rem 1.2rem; border: 1px solid #8888; border-radius: .6rem; color: inherit; text-decoration: none; }
+    a:hover, a:focus-visible { border-color: currentColor; background: #8881; }
+    strong, span { display: block; } span { opacity: .7; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Home lab</h1>
+    <p>Your services, in one place.</p>
+    <nav aria-label="Home lab services">
+      <ul>
+        <li><a href="https://pve01.@DOMAIN@/"><strong>Proxmox · pve01</strong><span>Manage the first node</span></a></li>
+        <li><a href="https://pve02.@DOMAIN@/"><strong>Proxmox · pve02</strong><span>Manage the second node</span></a></li>
+        <li><a href="https://pihole01.@DOMAIN@/admin/"><strong>Pi-hole · primary</strong><span>Filtering and DNS activity</span></a></li>
+        <li><a href="https://pihole02.@DOMAIN@/admin/"><strong>Pi-hole · secondary</strong><span>Filtering and DNS activity</span></a></li>
+        <li><a href="https://uptime.@DOMAIN@/"><strong>Uptime Kuma</strong><span>Service monitoring</span></a></li>
+      </ul>
+    </nav>
+  </main>
+</body>
+</html>

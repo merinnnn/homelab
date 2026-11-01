@@ -21,6 +21,10 @@ jobs:
           find . -name "*.sh" -type f -print0 | xargs -0 -r -n 1 bash -n
 
       - name: Validate Docker Compose files
+        env:
+          CADDY_IMAGE: caddy:2.11.7-alpine
+          PROXY_BIND_IP: 127.0.0.1
+          PROXY_STACK_DIR: /opt/homelab/reverse-proxy
         run: |
           find configs/docker -name "docker-compose.yml" -type f -print0 | xargs -0 -r -I {} docker compose -f "{}" config
 
@@ -35,3 +39,9 @@ jobs:
 
       - name: Test native Pi-hole deployment behavior
         run: bash scripts/tests/pihole-native-offline.sh
+
+      - name: Test local service access helpers
+        run: |
+          bash scripts/tests/reverse-proxy-offline.sh
+          node scripts/tests/static-network-offline.cjs
+          python3 scripts/tests/local-dns-offline.py
