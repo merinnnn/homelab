@@ -64,4 +64,6 @@ latest="$(
     tail -1
 )"
 
-[[ -n "$latest" && "$(uname -r)" != "$latest" ]] && reboot
+if [[ -n "$latest" && "$(uname -r)" != "$latest" ]]; then
+    reboot
+fi

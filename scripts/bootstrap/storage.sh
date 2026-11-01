@@ -44,11 +44,17 @@ smartctl -H "$DISK"
 
 echo "--- FINAL STATE ---"
 
-if grep -R 'thin_pool_autoextend_' \
-    /etc/lvm/lvmlocal.conf \
-    /etc/lvm/lvm.conf 2>/dev/null |
-    grep -v '^[^:]*:[[:space:]]*#' |
-    grep -q .; then
+LVM_CONFIG_FILES=(/etc/lvm/lvm.conf)
+if [ -f /etc/lvm/lvmlocal.conf ]; then
+    LVM_CONFIG_FILES+=(/etc/lvm/lvmlocal.conf)
+fi
+
+ACTIVE_AUTOEXTEND="$(awk '
+    /^[[:space:]]*#/ {next}
+    /thin_pool_autoextend_/ {print}
+' "${LVM_CONFIG_FILES[@]}")"
+
+if [ -n "$ACTIVE_AUTOEXTEND" ]; then
     echo "Active custom thin-pool autoextend configuration found"
     exit 1
 fi
