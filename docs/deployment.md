@@ -13,7 +13,7 @@ As created on 1 November 2026:
 | pve02 | VM 100, apps01 | 2 vCPU, 2 GiB RAM, 32 GiB disk | vmbr0, DHCP; observed 192.168.1.58 |
 | pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; observed 192.168.1.210 |
 
-These are permanent guests, not disposable validation resources. Confirm names, ownership and current DHCP addresses before running commands. The router pool is .10-.254; do not assign unreserved static addresses inside it. dns01 now has a router reservation at .210 and verified router DNS forwarding. Router DHCP remains enabled. apps01 .58 remains an observed lease requiring reservation. See [Pi-hole network setup and rollback](pihole.md).
+These are permanent guests, not disposable validation resources. Confirm names, ownership and current DHCP addresses before running commands. The router pool is .10-.254; do not assign unreserved static addresses inside it. dns01 now has a router reservation at .210. Router DNS prioritizes public 1.1.1.1/1.0.0.1 with .210 third; default-client browsing passed while dns01 was stopped. Do not make household DNS depend only on the homelab. Router DHCP remains enabled. apps01 .58 remains an observed lease requiring reservation. See [Pi-hole network setup and rollback](pihole.md).
 
 ## apps01 on pve02
 

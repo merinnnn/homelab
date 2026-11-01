@@ -16,7 +16,7 @@ Both guests use router DHCP on vmbr0. The router pool is .10-.254 with a 1440-mi
 - apps01: BC:24:11:B4:7E:DA, observed 192.168.1.58.
 - dns01: BC:24:11:42:2A:6F, reserved 192.168.1.210; retained after reboot.
 
-The old proposed addresses .53/.54 were not assigned. Router DHCP remains enabled; its DNS1 is now .210 with DNS2/3 unset. Default desktop DNS through .1 reaches Pi-hole and blocks real ad domains. Public port forwarding was not changed. See [Pi-hole network setup and rollback](pihole.md). Portainer is not deployed.
+The old proposed addresses .53/.54 were not assigned. Router DHCP remains enabled. DNS1/2 are now 1.1.1.1/1.0.0.1, with Pi-hole .210 as DNS3. Default desktop browsing passed while Pi-hole CT100 was stopped; household ad filtering is best effort and is currently bypassed by public DNS. Public port forwarding was not changed. See [Pi-hole network setup and rollback](pihole.md). Portainer is not deployed.
 
 Account files are root-only and outside Git: `/etc/homelab/uptime-kuma.json` on pve02 and `/etc/homelab/pihole-password` on pve01. Use the external credential store to retrieve passwords; never paste them into scripts, notes or Git. The Kuma username is merin.
 
@@ -34,4 +34,4 @@ Source checks passed: 42 general behavior cases, 34 application cases, 47 native
 
 ## Remaining work
 
-Reserve the apps01 lease, configure off-node backups and test restore. Pi-hole reservation, router DNS forwarding, a successful 76,737-domain gravity refresh and post-change reboot/default-client blocking are verified. Host reboot, live IPv6 routing/isolation and automatic address-change handling were not tested. The existing broad health scripts also include a planned Portainer target; use explicit target overrides and interpret undeployed-service checks accordingly. Legacy Docker Pi-hole/Portainer examples are not the native deployment used here.
+Reserve the apps01 lease, configure off-node backups and test restore. Pi-hole reservation, successful 76,737-domain gravity refresh and post-change reboot are verified. The later availability-first DNS change supersedes default-client blocking: six baseline and six container-outage DNS/HTTPS checks passed with public resolvers prioritized. Host reboot, live IPv6 routing/isolation and automatic address-change handling were not tested. The existing broad health scripts also include a planned Portainer target; use explicit target overrides and interpret undeployed-service checks accordingly. Legacy Docker Pi-hole/Portainer examples are not the native deployment used here.

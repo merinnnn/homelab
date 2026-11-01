@@ -11,3 +11,5 @@ Preserve independent server edits before updating checkouts. Use backups/stashes
 Report PASS/FAIL/BLOCKED/NOT RUN with evidence, separating mocks, live observations, historical records and plans. Update repository deployment/status docs and the external knowledge vault when available. Deployment is incomplete until services, authentication, monitor/DNS behavior and persistence are verified.
 
 Make one Git commit per major completed repository change with a simple message. Do not add co-author trailers unless requested. Pushing and host reboots remain separate actions.
+
+Household browsing must remain independent of Pi-hole and either Proxmox node. Current router DNS is public resolvers first, Pi-hole third; network-wide filtering is best effort. Do not restore Pi-hole-only household DNS. Review docs/pihole.md and verify a bounded outage with automatic recovery before changing this policy.
