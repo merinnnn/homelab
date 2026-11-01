@@ -26,6 +26,12 @@ printf '%s\n' "$*" >> "$FIXTURE/systemctl.calls"
 [[ "$MOCK_MODE" != service_fail ]]
 MOCK
 chmod +x "$WORK/bin/git" "$WORK/bin/systemctl"
+cat > "$WORK/bin/runuser" <<'MOCK'
+#!/usr/bin/env bash
+[[ "$*" == '-u pihole -- test -r '* ]]
+[[ "$MOCK_MODE" != web_unreadable ]]
+MOCK
+chmod +x "$WORK/bin/runuser"
 cat > "$WORK/bin/install" <<'MOCK'
 #!/usr/bin/env bash
 # Windows Git Bash cannot enforce Unix directory ownership/mode; record intent.
@@ -42,6 +48,7 @@ set -euo pipefail
 grep -q '^port = ""$' "$FIXTURE/config/pihole.toml"
 grep -A1 '^\[dhcp\]' "$FIXTURE/config/pihole.toml" | grep -q 'active = false'
 printf 'called\n' >> "$FIXTURE/installer.calls"
+umask > "$FIXTURE/installer.umask"
 [[ "$MOCK_MODE" != installer_fail ]] || exit 7
 cat > "$FIXTURE/ftl" <<'FTL'
 #!/usr/bin/env bash
@@ -113,6 +120,7 @@ assert 'rejects TOML injection in interface' bash -c '! PIHOLE_INTERFACE="eth0\"
 assert 'rejects unbounded LAN prefix' bash -c '! PIHOLE_LAN_CIDR=192.168.1.0/0 bash "$1" --render-config >/dev/null 2>&1' _ "$DEPLOY_SCRIPT"
 new_fixture healthy
 assert 'fresh install succeeds using preseed and --unattended' invoke
+assert 'native installer uses readable default permissions' test "$(cat "$FIXTURE/installer.umask")" = 0022
 if [[ ! -e "$FIXTURE/installer.calls" ]]; then cat "$FIXTURE/output"; exit 1; fi
 assert 'web enables only after password set' test -f "$FIXTURE/web-enabled"
 expected_digest="$(printf '%s' FixturePassword_OnlyForTests42 | sha256sum)"
@@ -136,7 +144,7 @@ export MOCK_MODE=policy_drift
 assert 'repeat refuses unsafe DNS policy drift without overwriting it' expect_fail
 export MOCK_MODE=healthy
 
-for scenario in installer_fail core_drift ftl_drift password_fail hash_missing; do
+for scenario in installer_fail core_drift ftl_drift password_fail hash_missing web_unreadable; do
     new_fixture "$scenario"; export MOCK_MODE="$scenario"
     assert "$scenario returns nonzero" expect_fail
     assert "$scenario never enables web" bash -c '[[ ! -e "$1/web-enabled" ]]' _ "$FIXTURE"

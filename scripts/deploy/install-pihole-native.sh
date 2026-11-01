@@ -81,8 +81,12 @@ has_password() {
     hash="$("$FTL_BIN" --config webserver.api.pwhash)" || return 1
     [[ -n "$(tr -d '"[:space:]' <<< "$hash")" ]]
 }
+verify_web_readable() {
+    runuser -u pihole -- test -r "$WEB_REPO" || { fail 'Web files are not readable by the service user'; return 1; }
+}
 verify_existing() {
     verify_versions || return 1
+    verify_web_readable || return 1
     has_password || { fail 'Installed Pi-hole has no configured admin password'; return 1; }
     [[ "$("$FTL_BIN" --config dhcp.active)" == false ]] || { fail 'Pi-hole DHCP must remain disabled'; return 1; }
     [[ "$("$FTL_BIN" --config webserver.port)" == '80,443s' ]] || { fail 'Expected web listeners are not configured; inspect partial install'; return 1; }
@@ -131,12 +135,13 @@ main() {
     printf 'Installer commit: %s\nInstaller SHA256: %s\nExpected Core/Web/FTL: %s %s %s\n' \
         "$PIHOLE_INSTALLER_COMMIT" "$PIHOLE_INSTALLER_SHA256" "$PIHOLE_EXPECTED_CORE" "$PIHOLE_EXPECTED_WEB" "$PIHOLE_EXPECTED_FTL" > "$run_dir/provenance.txt"
     printf 'Installing from reviewed local file; private log directory: %s\n' "$run_dir"
-    if ! DEBIAN_FRONTEND=noninteractive bash "$PIHOLE_INSTALLER_FILE" --unattended </dev/null > "$run_dir/installer.log" 2>&1; then
+    if ! (umask 022; DEBIAN_FRONTEND=noninteractive bash "$PIHOLE_INSTALLER_FILE" --unattended </dev/null) > "$run_dir/installer.log" 2>&1; then
         unset ADMIN_PASSWORD
         fail 'Installer failed; web remains disabled; inspect private logs and partial guest'
         return 1
     fi
     verify_versions || { unset ADMIN_PASSWORD; return 1; }
+    verify_web_readable || { unset ADMIN_PASSWORD; return 1; }
     # No password argument in this wrapper's pihole invocation or command output.
     if ! printf '%s\n%s\n' "$ADMIN_PASSWORD" "$ADMIN_PASSWORD" | "$PIHOLE_BIN" setpassword > "$run_dir/password-status.log" 2>&1; then
         unset ADMIN_PASSWORD
