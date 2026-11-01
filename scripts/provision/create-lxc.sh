@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Proxmox inherits this mask when creating guest files such as /etc.
+# A restrictive caller mask must not make guest configuration unreadable.
+umask 022
+
 [ $# -ge 1 ] || {
     echo "Usage: $0 <hostname> [bridge]"
     exit 1

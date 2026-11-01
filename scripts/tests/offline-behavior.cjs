@@ -56,7 +56,16 @@ pveam() {
   esac
 }
 ip() { log "ip $*"; [ "$SCENARIO" != missing-bridge ]; }
-pct() { log "pct $*"; return 0; }
+pct() {
+  log "pct $*"
+  if [ "$SCENARIO" = restrictive-caller ]; then
+    command mkdir "$TEST_DIR/guest-etc"
+    : > "$TEST_DIR/guest-etc/resolv.conf"
+    log "guest etc mode $(command stat -c %a "$TEST_DIR/guest-etc")"
+    log "guest resolver mode $(command stat -c %a "$TEST_DIR/guest-etc/resolv.conf")"
+  fi
+  return 0
+}
 mkdir() { log "mkdir $*"; return 0; }
 ssh() { log "ssh $*"; [ "$SCENARIO" != ssh-failure ]; }
 awk() {
@@ -81,10 +90,10 @@ curl() {
 dig() { if [ "$SCENARIO" = all-healthy ]; then echo 1.1.1.1; return 0; fi; [ "$SCENARIO" = empty-dns-answer ]; }
 `);
 const results=[];
-function run(name, script,args=[],scenario='happy',leases='9999999999 aa:bb:cc:dd:ee:ff 10.0.10.128 vm *\n', assert=()=>true) {
+function run(name, script,args=[],scenario='happy',leases='9999999999 aa:bb:cc:dd:ee:ff 10.0.10.128 vm *\n', assert=()=>true, callerUmask=null) {
   const log=path.join(fixtures,'commands.log'), lease=path.join(fixtures,'leases');
   fs.writeFileSync(log,'');fs.writeFileSync(lease,leases);
-  const command=`source ${quote(posix(path.join(fixtures,'mock-functions.sh')))}; source ${quote(posix(path.join(fixtures,script)))} ${args.map(quote).join(' ')}`;
+  const command=`${callerUmask ? 'umask '+quote(callerUmask)+'; ' : ''}source ${quote(posix(path.join(fixtures,'mock-functions.sh')))}; source ${quote(posix(path.join(fixtures,script)))} ${args.map(quote).join(' ')}`;
   const r=cp.spawnSync(bash,['-c',command],{encoding:'utf8',env:{...process.env,SCENARIO:scenario,TEST_LOG:posix(log),TEST_LEASES:posix(lease),TEST_DIR:posix(fixtures)}});
   const item={name,scenario,exit:r.status,stdout:r.stdout,stderr:r.stderr,commands:fs.readFileSync(log,'utf8')};
   item.expectationMet=!!assert(item);results.push(item);
@@ -117,6 +126,7 @@ for(const script of ['create-vm.sh','create-lxc.sh']) {
   run(`${script} rejects multiple storage choices`,script,args,'multiple-storage',undefined,r=>r.exit!==0&&!r.commands.includes(script==='create-vm.sh'?'qm create':'pct create'));
   run(`${script} rejects missing storage`,script,args,'no-storage',undefined,r=>r.exit!==0&&!r.commands.includes(script==='create-vm.sh'?'qm create':'pct create'));
 }
+run('create-lxc normalizes restrictive caller mask for guest configuration','create-lxc.sh',['offline-test'],'restrictive-caller',undefined,r=>r.exit===0&&r.commands.includes('pct create 900')&&r.commands.includes('guest etc mode 755')&&r.commands.includes('guest resolver mode 644'),'077');
 run('create-vm rejects missing image','create-vm.sh',['offline-test','vmbr1',key],'missing-image',undefined,r=>r.exit!==0&&!r.commands.includes('qm create'));
 run('create-vm rejects missing key','create-vm.sh',['offline-test','vmbr1',key+'.missing'],'happy',undefined,r=>r.exit!==0&&!r.commands.includes('qm create'));
 run('create-vm import failure leaves partial VM','create-vm.sh',['offline-test','vmbr1',key],'import-failure',undefined,r=>r.exit!==0&&r.commands.includes('qm create')&&!r.commands.includes('qm destroy'));
