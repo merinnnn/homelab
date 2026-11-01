@@ -11,9 +11,10 @@ As created on 1 November 2026:
 | Node | Guest | Resources | Network |
 | --- | --- | --- | --- |
 | pve02 | VM 100, apps01 | 2 vCPU, 2 GiB RAM, 32 GiB disk | vmbr0, DHCP; observed 192.168.1.58 |
-| pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; observed 192.168.1.210 |
+| pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; reserved 192.168.1.210 |
+| pve02 | CT 101, dns02 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, DHCP; reserved 192.168.1.150 |
 
-These are permanent guests, not disposable validation resources. Confirm names, ownership and current DHCP addresses before running commands. The router pool is .10-.254; do not assign unreserved static addresses inside it. dns01 now has a router reservation at .210. Router DNS prioritizes public 1.1.1.1/1.0.0.1 with .210 third; default-client browsing passed while dns01 was stopped. Do not make household DNS depend only on the homelab. Router DHCP remains enabled. apps01 .58 remains an observed lease requiring reservation. See [Pi-hole network setup and rollback](pihole.md).
+These are permanent guests, not disposable validation resources. Confirm names, ownership and addresses before running commands. Router DHCP stays enabled, pool .10-.254. Both Pi-hole reservations are saved; apps01 .58 remains an observed lease requiring reservation. Router DNS uses AdGuard filtered public94.140.14.14 first, then .210/.150. All choices filter ads; public filtering can be used while nodes are healthy. Ten normal and ten both-container-outage checks passed. See [DNS evidence and limits](pihole.md). Both nodes may remain off without being a required DNS dependency.
 
 ## apps01 on pve02
 
@@ -44,12 +45,15 @@ Use normal Git fetch/fast-forward from the development repository or a verified 
 
 Run `node scripts/tests/offline-behavior.cjs`, `node scripts/tests/apps-deployment.cjs`, `node scripts/tests/no-embedded-identities.cjs` and `bash scripts/tests/pihole-native-offline.sh` when Node/Bash are available. A source test pass is separate from actual running service, auth, DNS and persistence checks. Deployment status is recorded in the project reports; these commands alone do not assert that deployment completed.
 
-## Additional named Pi-hole instance
+## dns02 on pve02 and additional instances
 
 The node-local wrapper accepts optional expected hostname and DNS port:
 
 ```bash
-bash scripts/deploy/proxmox-pihole.sh <allocated-ctid> /etc/homelab/pihole-password dns02 5353
+cd /root/homelab
+bash scripts/deploy/proxmox-pihole.sh 101 /etc/homelab/pihole-password dns02 53
 ```
 
-The original two-argument invocation remains dns01 on port53. An explicit dns02 instance and alternate backend port support redundant filtering behind health-checked DNS frontends. Only use a recorded, owned guest. Existing hostname/port/configuration drift is refused, not overwritten; intentionally migrating an existing port requires a separately reviewed change. This wrapper does not implement DNS failover or change the router. Public-first router settings remain interim pending the clarified filtering-first architecture.
+The original two-argument invocation remains dns01 on port53. The permanent dns02 also uses standard port53; no DNS frontend or port5353 service is deployed. Optional hostname/port parameters support other reviewed deployments. Only use a recorded, owned guest. Existing hostname/port/configuration drift is refused, not overwritten. This wrapper does not change router DNS. The accepted public-filtered-primary arrangement is documented in [household DNS](pihole.md).
+
+The creation helper explicitly sets umask022 before Proxmox commands so guest configuration directories remain service-readable even when the caller uses umask077. The dns02 installation exposed this dependency: /etc mode0700 blocked _apt DNS access; repairing that guest directory to0755 allowed the official installer to complete. Private runtime files remain explicitly mode600. The regression suite tests creation under a restrictive caller umask.

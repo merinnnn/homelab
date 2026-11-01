@@ -1,41 +1,52 @@
-# Pi-hole and household DNS availability — 1 November 2026
+# Filtered household DNS resilience — 1 November 2026
 
-Household browsing takes priority over ad blocking. DNS must remain usable when Pi-hole or either Proxmox node is unavailable. The router has independent public resolvers; the homelab is not a required DNS dependency.
-
-Pi-hole remains installed in pve01 CT100 dns01: http://192.168.1.210/admin/, TCP/UDP53. It is a permanent guest, reserved at .210 for MAC BC:24:11:42:2A:6F. It retains its own upstreams 1.1.1.1/1.0.0.1; never point them back to the router.
+The user approved an ad-blocking public DNS alternative so browsing and DNS ad blocking can continue even when both Proxmox nodes remain off after household power is restored. No additional device, router replacement or firmware change was used.
 
 ## Current router configuration
 
-Linksys Smart Wi-Fi, 192.168.1.1 > Connectivity > Local Network:
+Linksys MX5700 Series, firmware 1.0.2.216808, 192.168.1.1 > Connectivity > Local Network:
 
-| Field | Address |
-| --- | --- |
-| Static DNS1 | 1.1.1.1 |
-| Static DNS2 | 1.0.0.1 |
-| Static DNS3 | 192.168.1.210 |
+| Field | Address | Role |
+| --- | --- | --- |
+| Static DNS1 | 94.140.14.14 | AdGuard public DNS, default ads/trackers filtering |
+| Static DNS2 | 192.168.1.210 | pve01 CT100 dns01, Pi-hole |
+| Static DNS3 | 192.168.1.150 | pve02 CT101 dns02, Pi-hole |
 
-DHCP stays enabled on the router, pool .10-.254, lease 1440 minutes; Pi-hole DHCP stays disabled. The tested desktop continues using router .1 as its DNS server. Public resolvers are independent of both Proxmox nodes. Router/client resolver ordering is not a strict primary/backup contract: public alternatives can be used while Pi-hole is healthy. Default desktop queries for doubleclick.net currently return public addresses, so household-wide ad blocking is **not guaranteed**. Direct queries to .210 remain filtered.
+AdGuard is the public filtered primary in this ordering. It may answer while both Pi-holes are healthy and uses its own blocklist; local custom Pi-hole rules do not automatically apply there. Router DNS slots do not establish strict health-based primary/backup selection. The user accepted this compromise after Pi-hole-only and local-first tests timed out. Do not describe this as exclusive Pi-hole-first filtering with conditional public fallback.
 
-This availability-first policy supersedes the earlier Pi-hole-only router setup. A configuration with Pi-hole first and public alternatives second/third produced several 4-second DNS timeouts and slow browsing during baseline testing. It was not accepted. Public resolvers first passed the tests below. Devices deliberately configured to use only .210 would still lose DNS if it fails; provide those devices independent alternatives or leave them on automatic router DNS.
+All three configured DNS choices filter ads. The [AdGuard default public service](https://adguard-dns.io/en/public-dns.html) blocks ads and trackers. DNS filtering cannot remove every ad, including ads sharing domains with desired content. Applications using their own VPN/encrypted DNS can bypass router DNS; household devices were not audited individually.
 
-No usable IPv6 DNS/default route was advertised to the tested desktop; dns01 only has link-local IPv6. No IPv6 feature was disabled. Recheck DHCPv6/RDNSS if this changes. Custom VPN/encrypted/application DNS was not audited device by device.
+Router DHCP remains enabled, pool 192.168.1.10–192.168.1.254, lease 1440 minutes. Saved reservations are dns01 .210 / BC:24:11:42:2A:6F and dns02 .150 / BC:24:11:6F:74:55. The desktop uses router .1 for DNS. No usable IPv6 DNS/default route was advertised to that desktop; IPv6 was not disabled. Recheck DHCPv6/RDNSS if IPv6 connectivity changes.
+
+## Pi-hole instances
+
+| Instance | Guest | Admin page | DNS |
+| --- | --- | --- | --- |
+| dns01 | pve01 CT100 | http://192.168.1.210/admin/ | .210 TCP/UDP53 |
+| dns02 | pve02 CT101 | http://192.168.1.150/admin/ | .150 TCP/UDP53 |
+
+Both are permanent unprivileged Debian 13 LXCs with nesting enabled, 1 vCPU, 512 MiB RAM and 8 GiB disks. Both have onboot enabled, startup order10/up20/down30. Both run Core v6.5, Web v6.6.1 and FTL v6.8 with 76,737 loaded gravity domains from the [StevenBlack hosts list](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts). FTL and cron are enabled; Pi-hole DHCP/NTP are disabled. Weekly gravity is scheduled; its first scheduled execution has not been observed. Lists are not automatically synchronized between instances.
+
+Pi-hole upstreams remain independent 1.1.1.1/1.0.0.1. Never point them back to router .1, which would create a loop. Root-only account files live outside Git at /etc/homelab/pihole-password on each node. The second installation reuses the existing private account credential. Login, authenticated statistics and anonymous statistics denial were checked; secrets were not copied into source or reports.
 
 ## Actual outage verification
 
-The coordinator armed a 120-second recovery timer on pve01 before cleanly shutting down only CT100. It was confirmed stopped both before and after the client probes. Using the desktop's configured router DNS, with no public-server override:
+Using the desktop's configured router DNS with no resolver override, ten baseline checks and ten checks with BOTH CT100 on pve01 and CT101 on pve02 stopped passed:
 
-- A unique uncached name under example.com returned a valid negative DNS response in 11 ms (NOERROR/NODATA, zero answers, one authority record).
-- Positive DNS lookups for www.freebsd.org, www.python.org and www.mozilla.org succeeded in 45, 8 and 12 ms; these differed from baseline probe domains.
-- Fresh curl processes without proxies returned HTTPS200 for Debian in 288 ms and IANA in 101 ms.
-- Six baseline checks and six outage checks passed. The container was restored, its FTL service became active, and the recovery timer was canceled. An independent agent verified the result files, running guest/service and absence of leftover timers/units.
-- After restoration, direct Pi-hole lookups blocked doubleclick.net and resolved debian.org. Login HTTP200, authenticated API access and anonymous statistics denial passed.
+- A unique uncached name returned a valid negative response in 12 ms during the outage.
+- Three fresh positive domain lookups succeeded in 6–147 ms.
+- A fresh doubleclick.net subdomain returned blocked A/AAAA answers 0.0.0.0/::, including TCP DNS. Normal TCP DNS also succeeded.
+- Normal TLS requests returned IANA robots.txt HTTP200 in 118 ms and Google generate_204 HTTP204 in 50 ms; curl exited0 with complete transfers.
+- Both guests were confirmed stopped before AND after the probes. Independent 240-second recovery timers were armed on both hosts before shutdown. Both guests were then restored with direct blocking verified, and both recovery guards were cleared. The harness exited0.
 
-The outage test removed the only homelab DNS service entirely. Neither physical host was powered off. pve02 hosts no required household DNS component; its Docker applications/monitoring are separate from router internet access. This does not protect against router, ISP, power or public-resolver failure. It establishes continued DNS/browsing during the tested Pi-hole outage, not a universal uptime guarantee.
+Evidence is saved in the external project workspace under deployment/pihole/dns-filtered-both-baseline.json and dns-filtered-both-unavailable.json, with Test-FilteredDnsAvailability.ps1. These live results are separate from source mocks. The test removed both local DNS services while the router continued filtering through AdGuard. It did not power off either host or cold-boot the router; physical power restoration and ISP/router/public-resolver failures were NOT RUN. Saved router configuration makes DNS independent of node startup, but cold-boot behavior has not been verified.
 
-## Filtering, maintenance and recovery
+Retained failures explain the chosen setup: Pi-hole-only and local-first ordering each timed out on the first uncached outage query (~4 seconds). An earlier AdGuard-first test passed eight DNS checks, then a full Debian homepage transfer timed out at 12 seconds despite HTTP200; that full-page suite remains FAIL. A Debian HEAD request also timed out after both Pi-holes were restored, but the cause was not proven. The final smaller HTTPS probes establish DNS/HTTPS availability for the tested endpoints, not that every website transfer succeeds.
 
-The [StevenBlack list](https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts) has 76,737 loaded domains. Pi-hole blocks direct test queries and has FTL/cron enabled; weekly gravity is scheduled Sunday 04:26 guest-local time. First scheduled execution has not yet been observed. The guest starts automatically. DNS filtering cannot block every advertisement.
+## Maintenance and recovery
 
-For an entirely homelab-independent router configuration, set DNS3 to 0.0.0.0 while retaining DNS1/2 as the public resolvers. To restore the router's original automatic ISP configuration, set all three DNS fields to 0.0.0.0 and Apply. Keep the address reservation. Do not revert to Pi-hole-only household DNS: that violates the user's availability requirement.
+Deploy from /root/homelab on the appropriate node; see [deployment commands](deployment.md). An inherited restrictive umask created dns02 /etc as mode0700, preventing the installer’s _apt user from reading DNS configuration. Repairing that guest directory to0755 allowed installation; the creation helper now explicitly uses umask022, with a regression case. Private runtime files remain mode600.
 
-If DNS is unavailable, access Proxmox by IP 192.168.1.2 and the router by IP 192.168.1.1. Off-node backup/restore testing and the apps01 .58 reservation remain separate work. Passwords/keys belong outside Git. See [deployment](deployment.md) and [services](services.md).
+If DNS fails, reach the router by IP192.168.1.1 or Proxmox by IP192.168.1.2/.3. To temporarily remove local resolvers while preserving public filtering, replace DNS2 with AdGuard’s other default address94.140.15.15 and DNS3 with0.0.0.0, retaining DNS1. To restore original ISP automatic DNS, set all fields to0.0.0.0 and Apply; this relinquishes the configured filtering policy. Keep reservations. Do not restore Pi-hole-only household DNS without a design that survives both nodes being off.
+
+Off-node backups, restore testing and the apps01 .58 reservation remain separate work. See [running services](services.md). No host reboot, router replacement or firmware flashing was performed.

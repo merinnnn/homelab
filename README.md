@@ -11,7 +11,7 @@ Proxmox automation for two standalone mini PCs, with Debian VM/LXC creation and 
 
 Both nodes run Proxmox VE 9.2.20 as observed on 1 November 2026. `vmbr0` connects to the home LAN through the RE220/switch. Each node's `vmbr1` is a separate internal bridge with dnsmasq DHCP/DNS and host NAT; matching bridge names/subnets do not connect guests across nodes. Nodes are managed independently.
 
-Pi-hole is running in pve01 dns01 at http://192.168.1.210/admin/. Docker and Uptime Kuma are running in pve02 apps01 at http://192.168.1.58:3001. Both use router DHCP and have passed guest-reboot checks. Pi-hole has a router reservation at .210. Household DNS prioritizes independent public resolvers, with Pi-hole third; browsing passed a controlled Pi-hole-container outage test. Household ad filtering is best effort. See [Pi-hole network setup](docs/pihole.md). Portainer remains planned. See [running services](docs/services.md) and [node-local deployment](docs/deployment.md).
+Pi-hole runs on both nodes: pve01 dns01 at http://192.168.1.210/admin/ and pve02 dns02 at http://192.168.1.150/admin/. Both addresses have router reservations and both guests start automatically. Docker/Uptime Kuma runs in pve02 apps01 at http://192.168.1.58:3001. Router DNS lists AdGuard filtered public DNS first, then both Pi-holes. Ten normal checks and ten checks with both Pi-hole containers stopped passed, including fresh DNS, ad blocking and HTTPS. AdGuard can also answer while nodes are healthy; strict Pi-hole-only preference is not implemented. Physical power restoration was not tested. See [household DNS configuration and limits](docs/pihole.md), [running services](docs/services.md) and [node-local deployment](docs/deployment.md). Portainer remains planned.
 
 ## Scripts
 
@@ -64,4 +64,4 @@ Read [AGENTS.md](AGENTS.md) before continuing. Architecture notes are in [docs/n
 
 ## Deploy on the Proxmox nodes
 
-Use the installed /root/homelab checkout on each node. See [node-local deployment](docs/deployment.md) for apps01 and dns01 commands, external runtime configuration, and checkout update rules. Repository scripts must not embed personal identities or assume identity filenames.
+Use the installed /root/homelab checkout on each node. See [node-local deployment](docs/deployment.md) for apps01, dns01 and dns02 commands, external runtime configuration, and checkout update rules. Repository scripts must not embed personal identities or assume identity filenames.

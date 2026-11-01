@@ -27,8 +27,10 @@ Both observed nodes now load `/etc/nftables.d/homelab.nft` from `/etc/nftables.c
 
 See [firewall maintenance](firewall.md) before changing host rules. The full network bootstrap applies runtime rules but deliberately leaves boot integration for review; it must not overwrite an unknown existing firewall configuration. Do not run `systemctl restart nftables` blindly: the service stop action may globally flush rules.
 
-## Planned services
+## Household services and DNS
 
-Pi-hole now runs in dns01 at DHCP address `192.168.1.210`; Docker/Uptime Kuma run in apps01 at DHCP address `192.168.1.58`. The old .53/.54 assignments were not used because the router pool is unknown. Portainer remains planned. See [running services](services.md). Router DHCP pool is .10-.254 with 1440-minute leases. dns01 .210 is reserved. Router DNS1/2 are independent public 1.1.1.1/1.0.0.1; Pi-hole .210 is DNS3. Default desktop DNS/HTTPS passed a controlled dns01-container outage, prioritizing browsing availability over guaranteed household ad filtering. apps01 .58 still needs a reservation. See [Pi-hole network setup and rollback](pihole.md).
+Pi-hole runs in dns01 at reserved 192.168.1.210 on pve01 and dns02 at reserved 192.168.1.150 on pve02. Docker/Uptime Kuma runs in apps01 at observed DHCP address192.168.1.58; its reservation remains open. All use vmbr0. The proposed .53/.54 statics were not used. Router DHCP pool is .10-.254 with 1440-minute leases. Portainer remains planned.
+
+Router DNS1 is AdGuard filtered public94.140.14.14, DNS2 dns01.210 and DNS3 dns02.150. All configured choices filter ads; AdGuard may answer while nodes are healthy and uses a different blocklist. The user accepted this tradeoff to retain filtered DNS/browsing when both nodes stay off. This is not strict health-based Pi-hole-first failover. Ten normal and ten both-container-outage DNS/ad-block/HTTPS checks passed. Both guests were restored; no physical host/router power cycle was performed. See [running services](services.md) and [DNS evidence, limits and rollback](pihole.md).
 
 Historical extender MAC-passthrough and throughput claims were not retested in this run. See [setup status](setup-status.md) and the local Obsidian reports for evidence and limits.
