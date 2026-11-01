@@ -9,14 +9,20 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Validate shell scripts
         run: |
-          find . -name "*.sh" -type f -exec bash -n {} \;
+          find . -name "*.sh" -type f -print0 | xargs -0 -r -n 1 bash -n
 
       - name: Validate Docker Compose files
         run: |
-          find configs/docker -name "docker-compose.yml" -type f -exec docker compose -f {} config \;
+          find configs/docker -name "docker-compose.yml" -type f -print0 | xargs -0 -r -I {} docker compose -f "{}" config
+
+      - name: Test offline behavior
+        run: node scripts/tests/offline-behavior.cjs
