@@ -32,7 +32,7 @@ Run on the intended Proxmox node after confirming storage, images, bridges and f
 
 ```bash
 bash scripts/provision/prepare-images.sh
-bash scripts/provision/create-vm.sh example-debian vmbr1 /root/.ssh/id_rsa.pub
+bash scripts/provision/create-vm.sh example-debian vmbr1 /etc/homelab/guest-public-keys.pub
 qm start <printed-vmid>
 # Wait for DHCP and cloud-init/SSH readiness, then:
 bash scripts/provision/provision-debian-vm.sh <printed-vmid> homelab
@@ -61,3 +61,7 @@ CI parses shell scripts and validates Docker Compose configuration. It does not 
 ## Project records
 
 Read [AGENTS.md](AGENTS.md) before continuing. Architecture notes are in [docs/networking.md](docs/networking.md). On the project owner's Windows machine, the Obsidian vault is `C:\Users\merin\Documents\ChatGPT\Homelab\Knowledge`; start with `00 Start Here.md`. Keep dated test evidence and handoffs there. Credentials and private keys belong outside documentation and Git.
+
+## Deploy on the Proxmox nodes
+
+Use the installed /root/homelab checkout on each node. See [node-local deployment](docs/deployment.md) for apps01 and dns01 commands, external runtime configuration, and checkout update rules. Repository scripts must not embed personal identities or assume identity filenames.

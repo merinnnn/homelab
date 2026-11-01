@@ -1,13 +1,13 @@
 # Homelab working instructions
 
-Inspect Git status/diff and preserve existing changes before editing. The November 2026 run began with an uncommitted change to `scripts/provision/provision-debian-vm.sh`; later fixes build on it. Read `README.md`, `docs/setup-status.md` and `docs/networking.md` before running setup scripts.
+Run deployments from the repository checkout at /root/homelab on the appropriate Proxmox node. Read README.md, docs/deployment.md, docs/setup-status.md and docs/networking.md first. Inspect Git status/diff and live ownership before changes; preserve existing work. Do not use personal desktop paths, embedded identities, assumed identity filenames, or generated desktop bootstrap payloads in repository scripts.
 
-The local continuity record is the Obsidian vault at `C:\Users\merin\Documents\ChatGPT\Homelab\Knowledge`. Read `00 Start Here.md`, `Agent Guide.md`, current state, setup continuation and the latest test reports. If this path is unavailable, use the repository status documentation and explicitly report the missing live evidence. Update the vault after material work; never write credentials, private keys or tokens to notes or Git.
+Keep authorized keys, private keys, passwords, tokens and runtime account files outside Git. Scripts use standard authentication configuration or explicit public input. Private runtime files belong in /etc/homelab with root-only access. Never copy their contents into notes, logs or command arguments. The identity-free script audit is a required check.
 
-Both nodes are standalone. Each node's vmbr1 is host-local, despite using the same subnet. Inspect current guests, volumes, services, routes and firewall rules before mutation. A failed ping does not establish isolation. Do not run bootstrap/storage scripts as tests. Preserve unrelated nftables rules and host management access.
+Both nodes are standalone. Each vmbr1 is host-local despite sharing a subnet. VM100 on pve02 is permanent apps01; CT100 on pve01 is permanent dns01. Do not remove them as old test resources. One coordinator owns shared host changes, guest allocation and cleanup. Preserve unrelated nftables rules and management access. A failed ping does not establish isolation. Do not rerun bootstrap/storage scripts as diagnostics.
 
-One coordinator owns shared host mutations, guest allocation and cleanup. Record test ownership before creating resources; clean up only resources created by the current test. Historical guest IDs are not reservations. Do not overwrite remote `/root/homelab` working trees: they may have independent uncommitted work.
+Preserve independent server edits before updating checkouts. Use backups/stashes and fast-forward merges; do not discard dirty work. Guest payloads come from the installed checkout. Verify the same intended commit is installed on both nodes and record any retained server work.
 
-Use meaningful offline tests for failure behavior, then controlled live checks where access is authorized. Report PASS/FAIL/BLOCKED/NOT RUN with evidence; distinguish mock results, current live results, historical evidence and plans. Leave a concrete handoff and list remaining resources and material untested behavior. No commits, pushes or host reboots are implied by testing.
+Report PASS/FAIL/BLOCKED/NOT RUN with evidence, separating mocks, live observations, historical records and plans. Update repository deployment/status docs and the external knowledge vault when available. Deployment is incomplete until services, authentication, monitor/DNS behavior and persistence are verified.
 
-User preference: make one Git commit per major repository change with a simple message. Do not add co-author trailers unless requested. Commit completed, verified work; pushing remains separate.
+Make one Git commit per major completed repository change with a simple message. Do not add co-author trailers unless requested. Pushing and host reboots remain separate actions.

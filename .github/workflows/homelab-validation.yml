@@ -26,3 +26,12 @@ jobs:
 
       - name: Test offline behavior
         run: node scripts/tests/offline-behavior.cjs
+
+      - name: Test application deployment behavior
+        run: node scripts/tests/apps-deployment.cjs
+
+      - name: Reject embedded identities in scripts
+        run: node scripts/tests/no-embedded-identities.cjs
+
+      - name: Test native Pi-hole deployment behavior
+        run: bash scripts/tests/pihole-native-offline.sh
