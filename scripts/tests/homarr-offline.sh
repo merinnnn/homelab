@@ -69,6 +69,12 @@ cat > "$WORK/driver" <<'DRIVER'
 #!/usr/bin/env bash
 set -euo pipefail
 source "$SCRIPT"
+# The fixture models apps01 even when this offline suite runs on a PVE host.
+# Forward every other command builtin invocation unchanged.
+command() {
+    if [[ $# == 2 && "$1" == -v && "$2" == pveversion ]]; then return 1; fi
+    builtin command "$@"
+}
 id() { echo 0; }
 hostname() { echo apps01; }
 flock() { return 0; }
@@ -89,39 +95,58 @@ main "$@"
 DRIVER
 export SCRIPT
 new_case() { export CASE="$WORK/$1"; mkdir "$CASE"; export HOMARR_STACK_DIR="$CASE/stack" HOMARR_SECRET_DIR="$CASE/private" HOMARR_CA_FILE="$CASE/public.crt"; printf 'mock certificate\n' > "$HOMARR_CA_FILE"; }
-invoke_failure() { local status=0; bash "$WORK/driver" "$@" > "$CASE/output" 2>&1 || status=$?; [[ "$status" != 0 ]]; }
+invoke_failure() {
+    local expected_status="$1" expected_message="$2" status=0
+    shift 2
+    bash "$WORK/driver" "$@" > "$CASE/output" 2>&1 || status=$?
+    [[ "$status" == "$expected_status" ]] || return 1
+    [[ -z "$expected_message" ]] || grep -Fxq "$expected_message" "$CASE/output"
+}
+has_docker_phase() {
+    [[ -s "$CASE/log" ]] || return 1
+    local expected
+    for expected in "$@"; do grep -Fxq "$expected" "$CASE/log" || return 1; done
+}
+no_docker_mutations() {
+    [[ -s "$CASE/log" ]] || return 1
+    ! grep -Eq '^pull |^volume create |(^| )up -d( |$)|(^| )down( |$)' "$CASE/log"
+}
 new_case invalid
-assert 'invalid arguments refused' invoke_failure --reset
+assert 'invalid arguments refused at argument phase' invoke_failure 1 'ERROR: Usage: homarr.sh' --reset
 assert 'invalid arguments make no directories or Docker calls' bash -c '[[ ! -e "$1/stack" && ! -e "$1/log" ]]' _ "$CASE"
 new_case unknown
 mkdir "$CASE/stack"; echo preserved > "$CASE/stack/custom"
-assert 'unknown stack refused' invoke_failure
+assert 'unknown stack refused at ownership phase' invoke_failure 1 'ERROR: Unknown existing stack; nothing overwritten'
 assert 'unknown stack preserved before Docker work' bash -c '[[ -f "$1/stack/custom" && ! -e "$1/log" && ! -e "$1/stack/.homelab-homarr-managed" ]]' _ "$CASE"
 new_case secret
 mkdir "$CASE/private"; echo preserved > "$CASE/private/custom"
-assert 'unknown private directory refused' invoke_failure
+assert 'unknown private directory refused at key phase' invoke_failure 1 'ERROR: Private key ownership or bytes changed; nothing overwritten'
 assert 'unknown private data preserved' bash -c '[[ -f "$1/private/custom" && ! -e "$1/log" && ! -e "$1/stack" ]]' _ "$CASE"
 new_case existing
 export MOCK_MODE=existing
-assert 'unowned existing project refused' invoke_failure
-assert 'unowned container untouched' bash -c '! grep -q "^pull\| up -d\| down" "$1/log"' _ "$CASE"
+assert 'unowned existing project refused at container ownership phase' invoke_failure 1 'ERROR: Existing project containers require ownership inspection'
+assert 'container ownership phase actually reached' has_docker_phase 'network inspect homelab-proxy_default --format {{index .Labels "com.docker.compose.project"}}' 'ps -a --filter label=com.docker.compose.project=homelab-homarr --format {{.ID}}'
+assert 'unowned container untouched after inspected phase' no_docker_mutations
 unset MOCK_MODE
 new_case volume
 export MOCK_MODE=existing_volume
-assert 'unowned existing data volume refused' invoke_failure
-assert 'unowned volume not replaced' bash -c '! grep -q "^pull\|^volume create\| up -d\| down" "$1/log"' _ "$CASE"
+assert 'unowned existing data volume refused at volume ownership phase' invoke_failure 1 'ERROR: Existing volume requires ownership inspection'
+assert 'volume ownership phase actually reached' has_docker_phase 'volume ls --format {{.Name}}'
+assert 'unowned volume not replaced after inspected phase' no_docker_mutations
 unset MOCK_MODE
 new_case pull_failure
-assert 'failed image pull stops deployment' invoke_failure
-assert 'failed pull makes no secret, data volume or active release' bash -c '[[ ! -e "$1/private" && ! -e "$1/stack/current" ]] && ! grep -q "^volume create\| up -d\| down" "$1/log"' _ "$CASE"
+assert 'failed image pull propagates actual pull exit status' invoke_failure 27 ''
+assert 'reviewed image pull actually attempted' has_docker_phase 'pull ghcr.io/homarr-labs/homarr:v2.10.1'
+assert 'failed pull makes no secret, data volume or active release' bash -c '[[ -s "$1/log" && ! -e "$1/private" && ! -e "$1/stack/current" ]] && ! grep -Eq "^volume create |(^| )up -d( |$)|(^| )down( |$)" "$1/log"' _ "$CASE"
 new_case image
 export HOMARR_IMAGE=untrusted/homarr:latest
-assert 'unreviewed image refused' invoke_failure
-assert 'unreviewed image never pulled' bash -c '! grep -q "^pull" "$1/log"' _ "$CASE"
+assert 'unreviewed image refused at image policy phase' invoke_failure 1 'ERROR: Use the reviewed official release or digest'
+assert 'image policy phase follows existing-state inspection' has_docker_phase 'volume ls --format {{.Name}}'
+assert 'unreviewed image never pulled after inspected phase' no_docker_mutations
 unset HOMARR_IMAGE
 new_case bad_ca
 export MOCK_MODE=bad_ca
-assert 'invalid public certificate refused' invoke_failure
+assert 'invalid public certificate refused at certificate phase' invoke_failure 1 'ERROR: Public Caddy root certificate is invalid or expired'
 assert 'invalid certificate makes no stack, secret or Docker changes' bash -c '[[ ! -e "$1/private" && ! -e "$1/stack" && ! -e "$1/log" ]]' _ "$CASE"
 unset MOCK_MODE
 printf 'Homarr offline checks: %s; failures: %s\n' "$checks" "$failures"

@@ -2,6 +2,7 @@
 """Offline bootstrap state-machine and transport tests; no live service mutation."""
 import contextlib
 import copy
+import hashlib
 import importlib.util
 import io
 import json
@@ -17,6 +18,24 @@ spec = importlib.util.spec_from_file_location('homarr_bootstrap', ROOT / 'script
 h = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(h)
 SERVICES = h.services_from(ROOT / 'configs/docker/homarr/services.json')
+
+
+def initial_seed():
+    rows = [{'id': 'seed-' + str(index), 'name': name, 'href': href} for index, (name, href) in enumerate([
+        ('Homarr Docs', 'https://homarr.dev/docs/getting-started'),
+        ('Homarr GitHub', 'https://github.com/homarr-labs/homarr'),
+        ('Help Translate', 'https://homarr.dev/docs/community/translations'),
+        ('Support Homarr', 'https://opencollective.com/homarr')])]
+    def item(kind, options, width, height):
+        return {'id': 'seed-item-' + kind + str(options.get('appId', '')), 'kind': kind, 'options': options,
+            'integrationIds': [], 'advancedOptions': {'title': None, 'customCssClasses': [], 'borderColor': ''},
+            'layouts': [{'width': width, 'height': height}, {'width': width, 'height': height}]}
+    items = [item('app', {'appId': row['id'], 'openIn': 'newTab', 'showTitle': True}, 1, 1) for row in rows]
+    items.extend([item('clock', {}, 2, 1),
+        item('weather', {'showHumidity': False, 'showCity': False, 'hasForecast': False}, 2, 1),
+        item('bookmarks', {'title': 'Useful Links', 'layout': 'grid', 'openNewTab': True,
+                          'items': [row['id'] for row in rows]}, 2, 2)])
+    return rows, items
 
 
 class FakePath:
@@ -93,9 +112,14 @@ class FakeClient:
                 raise AssertionError('Invalid setup flow')
             assert value['server']['analyticsEnabled'] is False
             assert value['integrations'] == [] and value['selectedDockerSourceIds'] == []
-            self.server['apps'] = copy.deepcopy(value['apps'])
+            self.server['apps'] = [dict(app, id='onboarding_app_' + hashlib.sha256(app['sourceId'].encode()).hexdigest()[:32])
+                                   for app in value['apps']]
+            seed_apps, seed_items = initial_seed()
             self.server['board'] = {'id': 'owned-board', 'name': 'homelab', 'isPublic': False,
-                'items': [{'kind': 'app', 'options': {'appId': app['sourceId']}} for app in value['apps']]}
+                'sections': [{'id': 'root', 'kind': 'empty', 'xOffset': 0, 'yOffset': 0}],
+                'items': seed_items + [{'id': 'our-item-' + app['id'], 'kind': 'app', 'options': {'appId': app['id']}}
+                                     for app in self.server['apps']]}
+            self.server['apps'].extend(seed_apps)
             self.server['step'] = 'finish'
             return {'boardId': 'owned-board', 'boardName': 'homelab'}
         elif method == 'board.getBoardByName':
@@ -107,8 +131,13 @@ class FakeClient:
             if not self.logged_in:
                 raise AssertionError('Anonymous write')
             self.server['board']['isPublic'] = True
+        elif method == 'board.saveBoard':
+            if not self.logged_in:
+                raise AssertionError('Anonymous write')
+            self.server['board']['items'] = copy.deepcopy(value['items'])
+            self.server['board']['sections'] = copy.deepcopy(value['sections'])
         elif method == 'app.byIds':
-            return copy.deepcopy(self.server['apps'])
+            return copy.deepcopy([row for row in self.server['apps'] if row['id'] in value])
         else:
             raise AssertionError('Unexpected RPC')
 
@@ -152,6 +181,46 @@ class BootstrapTests(unittest.TestCase):
         c.server['apps'][0]['href'] = 'https://unknown.home.arpa/'
         with self.assertRaises(h.Refused):
             self.run_bootstrap(c.factory(c.base), p)
+    def test_actual_seed_four_cards_three_widgets_are_removed_once(self):
+        c, p = FakeClient(), Private()
+        self.run_bootstrap(c, p)
+        self.assertEqual(len(c.server['board']['items']), 7)
+        self.assertEqual(len(c.server['apps']), 11)  # Unused seed app inventory retained.
+        self.assertEqual(c.server['calls'].count(('MUTATE', 'board.saveBoard')), 1)
+        self.assertTrue(p.files['bootstrap.json']['board_verified'])
+    def seeded_fixture(self):
+        c, p = FakeClient(), Private()
+        self.run_bootstrap(c, p)
+        _, seed_items = initial_seed()
+        c.server['board']['items'].extend(seed_items)
+        c.server['board']['isPublic'] = False
+        p.files['bootstrap.json'].pop('board_verified')
+        c.server['calls'].clear()
+        return c, p
+    def test_customized_seed_widget_preserved(self):
+        c, p = self.seeded_fixture()
+        next(item for item in c.server['board']['items'] if item['kind'] == 'clock')['options'] = {'customTitle': 'Mine'}
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertNotIn(('MUTATE', 'board.saveBoard'), c.server['calls'])
+    def test_unknown_card_replacement_preserved(self):
+        c, p = self.seeded_fixture()
+        next(row for row in c.server['apps'] if row['id'] == 'seed-0')['href'] = 'https://example.org/'
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertNotIn(('MUTATE', 'board.saveBoard'), c.server['calls'])
+    def test_seed_cleanup_never_runs_after_verified_board(self):
+        c, p = self.seeded_fixture()
+        p.files['bootstrap.json']['board_verified'] = True
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertNotIn(('MUTATE', 'board.saveBoard'), c.server['calls'])
+    def test_seed_cleanup_never_runs_on_public_board(self):
+        c, p = self.seeded_fixture()
+        c.server['board']['isPublic'] = True
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertNotIn(('MUTATE', 'board.saveBoard'), c.server['calls'])
     def test_source_schema_exact_hosts_and_local_icons(self):
         self.assertEqual(len(SERVICES), 7)
         self.assertTrue(all(app['iconUrl'] == '/favicon.ico' for app in SERVICES))

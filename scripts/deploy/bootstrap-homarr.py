@@ -225,6 +225,7 @@ def bootstrap(client, services, private=PRIVATE, client_factory=Client):
     board = client.rpc('board.getBoardByName', {'name': BOARD_NAME})
     require(board.get('id') == state.get('board_id') and board.get('name') == BOARD_NAME,
             'Board ownership differs')
+    board = remove_initial_seed_items(client, board, services, state)
     verify_links(client, board, services)
     if not board.get('isPublic'):
         client.rpc('board.changeBoardVisibility', {'id': board['id'], 'visibility': 'public'}, mutation=True)
@@ -239,7 +240,84 @@ def bootstrap(client, services, private=PRIVATE, client_factory=Client):
     wrong = client_factory(client.base)
     require(not wrong.login({'username': admin['username'], 'password': secrets.token_urlsafe(36)}),
             'Incorrect password accepted')
+    if not state.get('board_verified'):
+        state['board_verified'] = True
+        replace_private(state_path, state)
     print('PASS Homarr administrator, completed onboarding, seven public read-only links, denied writes and wrong password')
+
+
+def remove_initial_seed_items(client, board, services, state):
+    """Remove the exact v2.10.1 first-start example items once, through editor API.
+
+    Homarr seeds a default board before onboarding; completeSetup retains its
+    four example app cards and clock/weather/bookmarks, then adds our seven.
+    Never prune a board after successful verification or public activation.
+    """
+    entries = board.get('items', [])
+    if len(entries) == 7:
+        return board
+    require(state.get('phase') == 'finished' and not state.get('board_verified')
+            and board.get('id') == state.get('board_id') and board.get('name') == BOARD_NAME
+            and board.get('isPublic') is False and len(entries) == 14,
+            'Unexpected board content; refusing initial example cleanup')
+    sections = board.get('sections', [])
+    require(len(sections) == 1 and sections[0].get('kind') == 'empty'
+            and sections[0].get('xOffset') == 0 and sections[0].get('yOffset') == 0,
+            'Initial board sections differ')
+    our_ids = {'onboarding_app_' + hashlib.sha256(app['sourceId'].encode()).hexdigest()[:32]
+               for app in services}
+    app_items = [item for item in entries if item.get('kind') == 'app']
+    require(len(app_items) == 11, 'Initial example app count differs')
+    all_ids = [item.get('options', {}).get('appId') for item in app_items]
+    require(all(isinstance(app_id, str) for app_id in all_ids) and len(set(all_ids)) == 11
+            and our_ids.issubset(all_ids), 'Initial app provenance differs')
+    rows = client.rpc('app.byIds', all_ids)
+    seed_pairs = {
+        ('Homarr Docs', 'https://homarr.dev/docs/getting-started'),
+        ('Homarr GitHub', 'https://github.com/homarr-labs/homarr'),
+        ('Help Translate', 'https://homarr.dev/docs/community/translations'),
+        ('Support Homarr', 'https://opencollective.com/homarr'),
+    }
+    seed_ids = set(all_ids) - our_ids
+    require(len(rows) == 11 and len(seed_ids) == 4
+            and {(row['name'], row['href']) for row in rows if row.get('id') in seed_ids} == seed_pairs
+            and {(row['name'], row['href']) for row in rows if row.get('id') in our_ids}
+                == {(app['name'], app['href']) for app in services}, 'Initial example service links differ')
+    keep = [item for item in app_items if item['options']['appId'] in our_ids]
+    extras = [item for item in entries if item not in keep]
+    require(len(keep) == 7 and len(extras) == 7, 'Initial cleanup scope differs')
+    widgets = [item for item in extras if item.get('kind') != 'app']
+    require(len(widgets) == 3 and {item.get('kind') for item in widgets} == {'clock', 'weather', 'bookmarks'},
+            'Initial example widget types differ')
+    advanced = {'title': None, 'customCssClasses': [], 'borderColor': ''}
+    for item in extras:
+        require(item.get('integrationIds') == [] and item.get('advancedOptions') == advanced,
+                'Customized example item must be preserved')
+        positions = item.get('layouts', [])
+        require(len(positions) == 2, 'Initial example item layouts differ')
+        kind, options = item.get('kind'), item.get('options')
+        expected_size = (1, 1) if kind == 'app' else (2, 2) if kind == 'bookmarks' else (2, 1)
+        require(all((position.get('width'), position.get('height')) == expected_size for position in positions),
+                'Resized example item must be preserved')
+        if kind == 'app':
+            require(options == {'appId': options.get('appId'), 'openIn': 'newTab', 'showTitle': True},
+                    'Customized example app must be preserved')
+        elif kind == 'clock':
+            require(options == {}, 'Customized clock must be preserved')
+        elif kind == 'weather':
+            require(options == {'showHumidity': False, 'showCity': False, 'hasForecast': False},
+                    'Customized weather must be preserved')
+        elif kind == 'bookmarks':
+            require(isinstance(options, dict) and set(options) == {'title', 'layout', 'openNewTab', 'items'}
+                    and options['title'] == 'Useful Links' and options['layout'] == 'grid'
+                    and options['openNewTab'] is True and len(options['items']) == 4
+                    and set(options['items']) == seed_ids, 'Customized bookmarks must be preserved')
+    # Keep all sections and each retained item's options/IDs/layouts unchanged.
+    client.rpc('board.saveBoard', {'id': board['id'], 'sections': sections, 'items': keep}, mutation=True)
+    cleaned = client.rpc('board.getBoardByName', {'name': BOARD_NAME})
+    require(cleaned.get('id') == board['id'], 'Board identity changed during cleanup')
+    verify_links(client, cleaned, services)
+    return cleaned
 
 
 def require_denied(client, procedure, payload):
@@ -279,7 +357,7 @@ if __name__ == '__main__':
     try:
         main()
     except Refused as error:
-        # Refused messages are fixed public phase labels, never response text.
+        # Deliberate Refused strings contain only fixed public phase labels.
         print('ERROR Homarr bootstrap: ' + str(error), file=sys.stderr)
         raise SystemExit(1)
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
