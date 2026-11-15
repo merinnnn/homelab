@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import ssl
 import unittest
 from unittest.mock import patch
 import sys
@@ -31,6 +32,35 @@ class Contracts(unittest.TestCase):
 
     def test_redirects_denied(self):
         self.assertIsNone(app.NoRedirect().redirect_request(None, None, 302, "redirect", {}, "https://example.com"))
+
+    def test_pinned_address_guard_requires_fixed_https_host_and_ca(self):
+        self.assertEqual(app.validate_target("https://n8n.home.arpa", "verify", str(SOURCE), "192.168.1.58"), "https://n8n.home.arpa")
+        for host, action, ca, address in [("https://n8n.home.arpa", "verify", str(SOURCE), "192.168.1.3"),
+                                          ("https://n8n.home.arpa", "verify", None, "192.168.1.58"),
+                                          ("http://172.18.0.9:5678", "bootstrap", None, "192.168.1.58"),
+                                          ("https://example.com", "verify", str(SOURCE), "192.168.1.58")]:
+            with self.subTest(host=host, address=address), self.assertRaises(app.Failure):
+                app.validate_target(host, action, ca, address)
+
+    def test_pinned_tls_dials_ip_but_validates_sni_hostname(self):
+        context = ssl.create_default_context()
+        connection = app.PinnedHTTPSConnection("n8n.home.arpa", connect_ip="192.168.1.58", context=context)
+        sock = unittest.mock.MagicMock()
+        with patch.object(app.socket, "create_connection", return_value=sock) as dial, patch.object(context, "wrap_socket", return_value=sock) as wrap:
+            connection.connect()
+        self.assertEqual(connection.host, "n8n.home.arpa")
+        self.assertEqual(dial.call_args.args[0], ("192.168.1.58", 443))
+        self.assertEqual(wrap.call_args.kwargs["server_hostname"], "n8n.home.arpa")
+        self.assertTrue(context.check_hostname)
+        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+
+    def test_pinned_transport_refuses_insecure_context_or_alternate_redirect_host(self):
+        insecure = ssl._create_unverified_context()
+        with self.assertRaises(app.Failure):
+            app.PinnedHTTPSConnection("n8n.home.arpa", connect_ip="192.168.1.58", context=insecure)
+        handler = app.PinnedHTTPSHandler(ssl.create_default_context(), "192.168.1.58")
+        with self.assertRaises(app.Failure):
+            handler.https_open(app.urllib.request.Request("https://example.com/"))
 
     def test_private_owner_repeat_and_identity_guard(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -22,8 +22,10 @@ Only after bootstrap succeeds, apply the updated proxy from the pve02 checkout a
 ```bash
 python3 /opt/homelab/n8n-payload/scripts/deploy/n8n-bootstrap.py verify \
   --base-url https://n8n.home.arpa \
-  --ca-file /opt/homelab/reverse-proxy/root.crt --workflow
+  --ca-file /opt/homelab/reverse-proxy/root.crt --connect-ip 192.168.1.58 --workflow
 ```
+
+The fixed connect IP bypasses apps01's router DNS only for this test, while retaining CA/hostname verification, SNI and HTTP Host for n8n.home.arpa. It does not change the guest/router resolver. Windows uses its existing home.arpa NRPT rule.
 
 It checks authentication/setup closure and runs an inactive synthetic Manual Trigger -> Code workflow returning42 through the external runner. It deletes only its exact unchanged fixture. It sends no external messages. A retained `active_probe` marker requires inspection before another acceptance run.
 

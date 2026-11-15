@@ -6,6 +6,7 @@ bootstrap uses only an inspected, owned Docker backend. verify uses the fixed
 HTTPS hostname with normal certificate validation. No redirects are followed.
 """
 import argparse
+import http.client
 import http.cookies
 import ipaddress
 import json
@@ -13,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import socket
 import ssl
 import stat
 import subprocess
@@ -115,12 +117,13 @@ def docker_owned_ips():
         raise Failure("Invalid n8n backend inspection") from None
 
 
-def validate_target(base, action, ca_file=None):
+def validate_target(base, action, ca_file=None, connect_ip=None):
     parsed = urllib.parse.urlsplit(base)
     require(not parsed.username and not parsed.password and not parsed.query and not parsed.fragment,
             "Target URL credentials, query or fragment refused")
     require(parsed.path in ("", "/"), "Target URL path refused")
     if action == "bootstrap":
+        require(connect_ip is None, "Connect address override is verification-only")
         require(parsed.scheme == "http" and parsed.port == 5678, "Bootstrap requires private Docker HTTP port 5678")
         try:
             address = ipaddress.ip_address(parsed.hostname or "")
@@ -131,6 +134,7 @@ def validate_target(base, action, ca_file=None):
         require(parsed.scheme == "https" and parsed.hostname == "n8n.home.arpa" and parsed.port in (None, 443),
                 "Verification requires https://n8n.home.arpa")
         require(ca_file and Path(ca_file).is_file(), "Existing public CA certificate required")
+        require(connect_ip in (None, "192.168.1.58"), "Connect address must be the fixed apps01 IP")
     return base.rstrip("/")
 
 
@@ -139,14 +143,45 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+class PinnedHTTPSConnection(http.client.HTTPSConnection):
+    """Dial apps01 without changing the HTTP host or TLS verification name."""
+    def __init__(self, host, *, connect_ip, **kwargs):
+        super().__init__(host, **kwargs)
+        require(self.host == "n8n.home.arpa" and self.port == 443 and connect_ip == "192.168.1.58",
+                "Pinned HTTPS endpoint differs")
+        require(self._context.check_hostname and self._context.verify_mode == ssl.CERT_REQUIRED,
+                "Pinned HTTPS requires certificate and hostname verification")
+
+        def fixed_connection(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None):
+            require(address == ("n8n.home.arpa", 443), "Pinned HTTPS connection target differs")
+            return socket.create_connection((connect_ip, 443), timeout, source_address)
+
+        self._create_connection = fixed_connection
+
+
+class PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    def __init__(self, context, connect_ip):
+        super().__init__(context=context)
+        self.connect_ip = connect_ip
+
+    def https_open(self, request):
+        require(request.host in ("n8n.home.arpa", "n8n.home.arpa:443"), "Pinned HTTPS request host differs")
+        def connection(host, **kwargs):
+            return PinnedHTTPSConnection(host, connect_ip=self.connect_ip, **kwargs)
+        return self.do_open(connection, request, context=self._context)
+
+
 class Client:
-    def __init__(self, base, ca_file=None):
+    def __init__(self, base, ca_file=None, connect_ip=None):
         self.base = base
         self.cookie = ""
         self.browser = str(uuid.uuid4())
         context = ssl.create_default_context(cafile=ca_file) if ca_file else ssl.create_default_context()
+        if connect_ip is not None:
+            validate_target(base, "verify", ca_file, connect_ip)
+        https_handler = PinnedHTTPSHandler(context, connect_ip) if connect_ip else urllib.request.HTTPSHandler(context=context)
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(),
-                                                 urllib.request.HTTPSHandler(context=context))
+                                                 https_handler)
 
     def request(self, method, path, payload=None, expected=(200,), authenticated=True):
         require(path.startswith("/") and not path.startswith("//"), "Unsafe API path")
@@ -332,6 +367,7 @@ def main():
     parser.add_argument("--private-dir", default="/etc/homelab/n8n", type=Path)
     parser.add_argument("--base-url")
     parser.add_argument("--ca-file")
+    parser.add_argument("--connect-ip", help="Verification-only fixed apps01 address, preserving HTTPS hostname/SNI")
     parser.add_argument("--workflow", action="store_true")
     args = parser.parse_args()
     require(os.name == "nt" or os.geteuid() == 0, "Run on the application VM as root")
@@ -344,11 +380,11 @@ def main():
         print(json.dumps({"owner_credentials": prepare(args.private_dir, payload)}))
         return
     require(args.base_url, "Base URL required")
-    base = validate_target(args.base_url, args.action, args.ca_file)
+    base = validate_target(args.base_url, args.action, args.ca_file, args.connect_ip)
     owner = read_private(args.private_dir / "owner.json")
     require(set(owner) == {"email", "firstName", "lastName", "password"} and
             all(isinstance(value, str) and value for value in owner.values()), "Owner credential format differs")
-    client = Client(base, args.ca_file)
+    client = Client(base, args.ca_file, args.connect_ip)
     result = bootstrap(client, args.private_dir, owner) if args.action == "bootstrap" else verify(client, args.private_dir, owner, args.workflow)
     print(json.dumps(result))
 
