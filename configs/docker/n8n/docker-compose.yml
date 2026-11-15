@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks: [database]
-    restart: unless-stopped
+    restart: always
     security_opt: [no-new-privileges:true]
     mem_limit: 192m
     pids_limit: 128
@@ -82,7 +82,7 @@ services:
       proxy: {aliases: [homelab-n8n]}
     depends_on:
       postgres: {condition: service_healthy}
-    restart: unless-stopped
+    restart: always
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     read_only: true
@@ -113,7 +113,7 @@ services:
     networks: [runners]
     depends_on:
       n8n: {condition: service_healthy}
-    restart: unless-stopped
+    restart: always
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     read_only: true

@@ -33,6 +33,8 @@ It checks authentication/setup closure and runs an inactive synthetic Manual Tri
 
 Named volumes `homelab-n8n-postgres17-data` and `homelab-n8n-data` must remain paired with the original encryption key. Never create replacement empty volumes or rotate the encryption key to repair a start failure. Volumes and all containers carry `io.homelab.managed=n8n-v1`. `/opt/homelab/n8n/current` points to a retained, manifest-verified private release.
 
+All three containers use `restart: always` so a Docker/guest restart also recovers services if power was lost during a backup stop window.
+
 The systemd backup timer runs daily at03:30 Europe/London plus up to five minutes jitter. It briefly stops n8n and runners under an independent recovery timer, leaves PostgreSQL running, validates a custom-format logical `pg_dump`, then archives all user-folder/binary data, private runtime and pinned release settings into root0600 `/var/backups/homelab-n8n`. Services must become healthy before disarming recovery. Snapshots include credentials; never place them in Git or this project's public notes. There is no automatic retention or recurring off-node transfer. Keep disk usage under review.
 
 Restore into a separate empty database/user-folder volume with the exact image pins and original encryption key. Validate archive paths first. Restore the logical dump with `pg_restore`, numeric user-folder ownership, private settings and matching key; verify inactive workflows and decrypted test credentials through maintenance CLI before allowing triggers. Never restore over running production data to test a backup. A same-node snapshot is not protection against losing pve02.
