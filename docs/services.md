@@ -1,4 +1,4 @@
-# Running services — 1 November 2026
+# Running services — 15 November 2026
 
 Deployments run from `/root/homelab` on each Proxmox host. Both checkouts contain the deployment scripts; guest payloads come from that checkout. Authentication uses normal host configuration. No personal identity material, identity filenames or desktop paths are embedded in scripts.
 
@@ -7,9 +7,9 @@ Deployments run from `/root/homelab` on each Proxmox host. Both checkouts contai
 | Uptime Kuma 2.5.8 | pve02 VM100, apps01 | http://192.168.1.58:3001 | Local named Docker volume homelab-uptime-kuma-data |
 | Pi-hole Core v6.5 / Web v6.6.1 / FTL v6.8 | pve01 CT100, dns01 | http://192.168.1.210/admin/ ; DNS 192.168.1.210 TCP/UDP 53 | Native guest configuration/databases under /etc/pihole |
 | Pi-hole Core v6.5 / Web v6.6.1 / FTL v6.8 | pve02 CT101, dns02 | http://192.168.1.150/admin/ ; DNS 192.168.1.150 TCP/UDP 53 | Native guest configuration/databases under /etc/pihole |
-| Caddy 2.11.7 reverse proxy | pve02 VM100, apps01 | https://proxy.home.arpa/ and the eight service names below, LAN ports80/443 | Persistent homelab-caddy-data/config named volumes |
+| Caddy 2.11.7 reverse proxy | pve02 VM100, apps01 | https://proxy.home.arpa/ and the nine service names below, LAN ports80/443 | Persistent homelab-caddy-data/config named volumes |
 
-apps01 has 2 vCPU, 3 GiB RAM and a 32 GiB disk. dns01 and dns02 are each an unprivileged Debian 13 LXC with 1 vCPU, 512 MiB RAM and an 8 GiB disk. Debian systemd requires nesting enabled in this LXC. All three guests start automatically and are permanent resources, not old test guests.
+apps01 has 2 vCPU, 4 GiB RAM and a 32 GiB disk. dns01 and dns02 are each an unprivileged Debian 13 LXC with 1 vCPU, 512 MiB RAM and an 8 GiB disk. Debian systemd requires nesting enabled in this LXC. All three guests start automatically and are permanent resources, not old test guests.
 
 ## Addressing and access
 
@@ -32,8 +32,9 @@ All three retained static networking after guest reboot; repeat migration checks
 | Homarr 2.10.1 | 192.168.1.58, private Docker backend | https://home.home.arpa/ |
 | Vaultwarden 1.37.4 | 192.168.1.58, private Docker backend | https://vault.home.arpa/ |
 | Grafana 13.3.0 | 192.168.1.58, private Docker backend | https://grafana.home.arpa/ |
+| n8n 2.47.7 | 192.168.1.58, private Docker backend | https://n8n.home.arpa/ |
 
-Web names point to proxy .58. Direct node01/node02.home.arpa names point to .2/.3, dns01/dns02.home.arpa to .210/.150, apps01.home.arpa to .58. Existing SSH aliases remain unchanged. Both Pi-holes have the records; Windows resolves home.arpa through a scoped NRPT rule while internet DNS continues through router .1. Other devices need local DNS and public Caddy root trust. The public root import completed for this Windows user; all nine pages pass normal Windows HTTPS/default trust. Automated visual browser verification was not established. See [local access deployment and limits](local-access.md).
+Web names point to proxy .58. Direct node01/node02.home.arpa names point to .2/.3, dns01/dns02.home.arpa to .210/.150, apps01.home.arpa to .58. Existing SSH aliases remain unchanged. Both Pi-holes have the records; Windows resolves home.arpa through a scoped NRPT rule while internet DNS continues through router .1. Other devices need local DNS and public Caddy root trust. The public root import completed for this Windows user; all ten pages pass normal Windows HTTPS/default trust. Automated visual browser verification was not established. See [local access deployment and limits](local-access.md).
 
 The proposed .53/.54 addresses were not assigned. Router DHCP remains enabled. DNS1 is AdGuard filtered public 94.140.14.14; DNS2/3 are Pi-hole .210/.150. Ten baseline and ten both-Pi-hole-container-outage checks passed through normal desktop/router DNS, including fresh ad blocking and HTTPS. AdGuard can answer even when nodes are healthy and uses its own list; this accepted compromise does not promise exclusive Pi-hole-first selection. See [DNS configuration, evidence and limits](pihole.md). Public port forwarding was not changed. Portainer is not deployed.
 
@@ -43,9 +44,23 @@ Account files are root-only and outside Git: `/etc/homelab/uptime-kuma.json` on 
 
 Vaultwarden, Homarr and Prometheus 3.15.1/Grafana 13.3.0/Alertmanager 0.34.2 run as private Docker backends with pinned official image digests. Prometheus/Alertmanager have no public proxy routes or host ports. Debian node exporters 1.9.0-1+b4 run on each Proxmox LAN IP:9100. Grafana login is required; its dashboard shows both hosts' CPU, available RAM, filesystem space, exporter status and firing alerts. Six rules cover outage, sustained pressure and failed management services. Telegram firing and recovery notifications were accepted by the API with zero integration failures. See [monitoring](monitoring.md).
 
-Vaultwarden has one privately invited owner pending registration; public signup is denied. Choose the master password directly in the web vault. Isolated real API/encryption/cold-backup/restore acceptance passed and disposable resources were cleaned. The daily backup timer, initial private off-node copy and limitations are described in [vault and Homarr](vault-and-homepage.md). No real owner master password or real vault item was created by an agent.
+Vaultwarden owner registration was pending in the1November report; it was not rechecked during n8n setup. Public signup remains disabled in the retained configuration. Choose the master password directly in the web vault. Isolated real API/encryption/cold-backup/restore acceptance passed and disposable resources were cleaned. The daily backup timer, initial private off-node copy and limitations are described in [vault and Homarr](vault-and-homepage.md). No real owner master password or real vault item was created by an agent.
 
 All seven containers/seven persistent volumes, static network, unchanged public CA, private login, pre-restart metric history and backup timer passed a graceful apps01 VM restart after increasing its RAM to3 GiB. Host reboots were not performed. Windows normal HTTPS9/9 and router DNS/filtering/internet10/10 passed. Private Grafana/Telegram runtime data remain outside Git.
+
+## n8n — 15 November 2026
+
+n8n2.47.7, matching official external runners and PostgreSQL17.12 run as three additional healthy containers on apps01. There are now ten active containers/ten active persistent volumes, plus one retained initial PostgreSQL16 volume. Caddy serves ten HTTPS names and both Pi-holes verify fifteen local records. Homarr has eight public read-only cards; the seven original cards/provenance remain intact.
+
+The owner account was initialized privately before proxy activation. Anonymous workflow access, wrong-password login and repeat owner claim are denied. Secure cookies are enabled. A real Manual Trigger -> JavaScript Code workflow returned42 through the external runner and was deleted; it passed again after all three n8n containers were recreated.43 independent live checks cover ownership, health, no published backend ports/socket, private runtime modes, matching private secrets, private DB network, TLS/readiness/auth closure and backup scheduling. Windows10/10 normal HTTPS passed. The public Caddy CA is unchanged.
+
+The daily03:30 Europe/London backup unit passed with an independently armed recovery guard, logical dump validation, complete private archive/checksum and healthy recovery. An initial off-node copy/checksum/private ACL passed. A separate isolated synthetic restore proved workflow/binary-data recovery and encrypted-credential decryption, plus wrong-key rejection; all disposable resources were removed. No real user workflow/credential was used in the restore fixture. Actual production-backup restore and physical power interruption were not tested.
+
+The initial PostgreSQL16 schema was migrated logically to a fresh17 volume after n8n's compatibility warning.178 tables/1445 live columns and per-table row counts matched; absolute dropped-column position gaps were excluded from semantic comparison. Old volume, private pre-upgrade dump/runtime and release remain recovery evidence, not a current production backup. Startup cache and buffered-dump validation defects were fixed; regression and live checks now pass. See [n8n](n8n.md) and the dated Knowledge report for exact evidence and limitations. Remaining VM memory availability was about2.0GiB; root disk13/32GiB,18GiB free.
+
+## Historical verification — 1 November 2026
+
+The following observations retain their original scope/date; current inventory is above.
 
 ## Earlier verified behavior
 

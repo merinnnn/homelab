@@ -44,6 +44,7 @@ Public AdGuard cannot resolve private home.arpa names. Keep household router DNS
 | https://home.home.arpa/ | http://homelab-homarr:7575/ on the private proxy network |
 | https://vault.home.arpa/ | http://homelab-vaultwarden:80/ on the private proxy network |
 | https://grafana.home.arpa/ | http://homelab-grafana:3000/ on the private proxy network |
+| https://n8n.home.arpa/ | http://homelab-n8n:5678/ on the private proxy network |
 
 Caddy runs in Docker in apps01, bound to its LAN address on ports80/443. HTTP redirects to HTTPS. The first installation pins the reviewed official release to its resolved digest; repeats retain it. Public Proxmox CA certificates verify each upstream's IP SAN; verification is never disabled. Prepare /etc/homelab/proxy-trust/{pve01,pve02}-ca.crt outside Git from each host's public /etc/pve/pve-root-ca.pem. Never copy TLS private keys.
 
@@ -66,3 +67,5 @@ Run bash scripts/tests/reverse-proxy-offline.sh, node scripts/tests/static-netwo
 References: [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy), [Caddy local HTTPS](https://caddyserver.com/docs/automatic-https), [Pi-hole local hosts configuration](https://docs.pi-hole.net/ftldns/configfile/), [Windows NRPT](https://learn.microsoft.com/en-us/powershell/module/dnsclient/add-dnsclientnrptrule), [home.arpa standard](https://www.rfc-editor.org/rfc/rfc8375).
 
 Current extension: both Pi-holes serve 14 desired records. Homarr/Vaultwarden/Grafana use the existing CA and Windows suffix rule; all nine Windows HTTPS addresses passed normal trust after the final VM restart. Prometheus and Alertmanager stay internal; Grafana provides the authenticated dashboard.
+
+15November2026 extension: n8n adds the tenth HTTPS site and fifteenth desired DNS record. Both Pi-holes and all ten Windows/default-trust pages passed, with the original public Caddy CA unchanged. Household router DNS, DHCP/static addresses, Windows NRPT and WAN forwarding were not changed. apps01's OS still uses router DNS; the n8n acceptance helper can dial fixed proxy IP.58 while preserving n8n.home.arpa SNI/HTTP Host/certificate validation. Other client devices still require local DNS and public-root trust. Native visual browser verification remains separate.

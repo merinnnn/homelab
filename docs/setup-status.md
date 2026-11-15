@@ -1,4 +1,13 @@
-# Setup status — 1 November 2026
+# Latest setup — 15 November 2026
+
+n8n2.47.7 is installed at https://n8n.home.arpa/ on apps01 with PostgreSQL17.12 and matching external runners. Protected owner setup, actual JavaScript42 workflow, container recreation persistence, daily backup/recovery, initial private off-node copy, isolated synthetic encrypted restore and43 independent live checks passed. All10 friendly HTTPS pages and15 Pi-hole records passed. Homarr now has8 cards. apps01 was raised to4GiB with a guarded graceful guest restart; no physical node/router reboot or household DNS-policy change occurred.10 healthy containers,10 active volumes plus1 retained PostgreSQL16 volume; original CA/accounts/data retained. See [n8n](n8n.md), [services](services.md) and the external Knowledge15November report for source hashes, retained failures and scope.
+
+No SMTP recovery, WAN webhook ingress, n8n HA, recurring off-node transfer or backup retention was configured. Production-backup restore, real external integrations/credentials, arbitrary workload capacity, visual browser rendering and physical power recovery remain NOT RUN. Synthetic restore used no production data and all exact-owned disposable resources were cleaned. Prior Telegram delivery and node-exporter behavior were not retested for this n8n extension. Credentials remain private outside Git/vault.
+
+---
+
+# Historical setup status — 1 November 2026
+
 
 Current extension: Vaultwarden, Homarr and node usage monitoring are installed. Telegram firing/recovery notifications, real two-node metrics, private authentication, isolated encrypted-vault restore, daily backup, initial off-node backup copy and 3 GiB apps01 VM restart persistence passed. See services.md, monitoring.md and vault-and-homepage.md. Owner master-password registration remains a private user step; recurring off-node backup transfer and monitoring its own pve02 failure need separate work.
 

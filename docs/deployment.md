@@ -6,11 +6,11 @@ Scripts contain no personal public/private key material and assume no identity f
 
 ## Existing permanent resources
 
-Current resources observed on 1 November 2026:
+Permanent resources, updated15November2026:
 
 | Node | Guest | Resources | Network |
 | --- | --- | --- | --- |
-| pve02 | VM 100, apps01 | 2 vCPU, 3 GiB RAM, 32 GiB disk | vmbr0, static/reserved 192.168.1.58 |
+| pve02 | VM 100, apps01 | 2 vCPU, 4 GiB RAM, 32 GiB disk | vmbr0, static/reserved 192.168.1.58 |
 | pve01 | CT 100, dns01 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, static/reserved 192.168.1.210 |
 | pve02 | CT 101, dns02 | 1 vCPU, 512 MiB RAM, 8 GiB disk, unprivileged | vmbr0, static/reserved 192.168.1.150 |
 
@@ -65,3 +65,7 @@ See [local service access](local-access.md) for the node-local migration/DNS/Cad
 ## Additional apps and node monitoring
 
 [Vaultwarden and Homarr](vault-and-homepage.md) and [Prometheus/Grafana/Telegram](monitoring.md) now run in apps01. Deploy from the installed node checkout, keep runtime credentials outside Git, and retain all persistent volumes. The guest RAM increase and graceful VM restart passed; both physical hosts stayed running.
+
+## n8n on apps01 — 15 November 2026
+
+From the pve02 `/root/homelab` checkout, run `bash scripts/deploy/proxmox-n8n.sh 100`. First installation requires private owner preparation/claim before proxy activation; read [n8n](n8n.md) for the exact account, backup, verification and recovery sequence. The fixed `.58` verification connection preserves HTTPS hostname/CA validation without relying on apps01's router resolver for private names. Daily root-only backup is enabled at03:30 Europe/London plus jitter. Initial private off-node copy was verified; recurring transfers/retention remain separate. Repeat container recreation retained owner/key/data and passed the real external-runner workflow again.
