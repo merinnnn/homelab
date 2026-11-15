@@ -86,7 +86,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     read_only: true
-    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,mode=1777']
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,mode=1777', '/home/node/.cache:rw,noexec,nosuid,nodev,size=64m,uid=1000,gid=1000,mode=0700']
     mem_limit: 640m
     pids_limit: 256
     stop_grace_period: 90s
@@ -132,5 +132,5 @@ networks:
   runners: {}
   proxy: {external: true, name: homelab-proxy_default}
 volumes:
-  postgres-data: {external: true, name: homelab-n8n-postgres-data}
+  postgres-data: {external: true, name: homelab-n8n-postgres17-data}
   n8n-data: {external: true, name: homelab-n8n-data}

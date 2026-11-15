@@ -31,7 +31,7 @@ jobs:
           HOMARR_SECRET_DIR: /etc/homelab/homarr
           N8N_IMAGE: docker.n8n.io/n8nio/n8n:2.47.7
           N8N_RUNNERS_IMAGE: n8nio/runners:2.47.7
-          N8N_POSTGRES_IMAGE: postgres:16.16-alpine
+          N8N_POSTGRES_IMAGE: postgres:17.12-alpine
           N8N_SECRET_DIR: /etc/homelab/n8n
           N8N_CA_FILE: /opt/homelab/reverse-proxy/root.crt
           CADDY_IMAGE: caddy:2.11.7-alpine

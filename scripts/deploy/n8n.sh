@@ -89,7 +89,7 @@ main() {
             service="$(docker inspect "$cid" --format '{{index .Config.Labels "com.docker.compose.service"}}')"
             case "$service" in
                 n8n) expected='volume:homelab-n8n-data'; volume='/home/node/.n8n' ;;
-                postgres) expected='volume:homelab-n8n-postgres-data'; volume='/var/lib/postgresql/data' ;;
+                postgres) expected='volume:homelab-n8n-postgres17-data'; volume='/var/lib/postgresql/data' ;;
                 runners) expected=''; volume='not-a-volume' ;;
                 *) fail 'Unknown project service'; return 1 ;;
             esac
@@ -97,7 +97,7 @@ main() {
         done <<< "$containers"
     fi
     volumes="$(docker volume ls --format '{{.Name}}')"
-    for volume in homelab-n8n-data homelab-n8n-postgres-data; do
+    for volume in homelab-n8n-data homelab-n8n-postgres17-data; do
         if grep -Fxq "$volume" <<< "$volumes"; then
             [[ -n "$previous" && "$(docker volume inspect "$volume" --format '{{index .Labels "io.homelab.managed"}}')" == n8n-v1 ]] || { fail 'Existing volume requires ownership inspection'; return 1; }
         elif [[ -n "$previous" ]]; then fail 'Managed data volume missing; refusing empty replacement'; return 1
@@ -106,7 +106,7 @@ main() {
     local image runner postgres key chosen resolved
     image=docker.n8n.io/n8nio/n8n:2.47.7
     runner=n8nio/runners:2.47.7
-    postgres=postgres:16.16-alpine
+    postgres=postgres:17.12-alpine
     if [[ -n "$previous" ]]; then
         image="$(sed -n 's/^N8N_IMAGE=//p' "$ROOT/current/.env")"
         runner="$(sed -n 's/^N8N_RUNNERS_IMAGE=//p' "$ROOT/current/.env")"
@@ -136,7 +136,7 @@ main() {
     (cd "$release" && sha256sum compose.yml .env > MANIFEST)
     verify_release "$release" || return 1
     docker compose --project-name homelab-n8n --env-file "$release/.env" -f "$release/compose.yml" config --quiet
-    for volume in homelab-n8n-data homelab-n8n-postgres-data; do
+    for volume in homelab-n8n-data homelab-n8n-postgres17-data; do
         if ! grep -Fxq "$volume" <<< "$volumes"; then docker volume create --label io.homelab.managed=n8n-v1 "$volume" >/dev/null; fi
     done
     pending="releases/${release##*/}"

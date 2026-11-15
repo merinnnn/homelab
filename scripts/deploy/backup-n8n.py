@@ -166,7 +166,7 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         items = containers()
         source = managed_volume(items['n8n']['data'], 'homelab-n8n-data', '/home/node/.n8n')
-        managed_volume(items['postgres']['data'], 'homelab-n8n-postgres-data', '/var/lib/postgresql/data')
+        managed_volume(items['postgres']['data'], 'homelab-n8n-postgres17-data', '/var/lib/postgresql/data')
         private_tree(RUNTIME)
         release = stack_release()
         private_directory(BACKUPS, create=True)
