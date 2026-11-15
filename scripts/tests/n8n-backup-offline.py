@@ -9,6 +9,7 @@ import tarfile
 import tempfile
 import types
 import unittest
+import subprocess
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
@@ -120,6 +121,26 @@ class BackupFailureTests(unittest.TestCase):
                 recover.assert_called_once()
             self.assertEqual(list(Path(directory).glob('*.tar.gz')), [])
             self.assertEqual(list(Path(directory).glob('*.sha256')), [])
+
+    def test_dump_validation_child_inherits_descriptor_at_header(self):
+        original_run = subprocess.run
+        child_seen = []
+        payload = b'PGDMP' + b'x' * 16384
+        def real_child(args, **kwargs):
+            if 'pg_dump' in args:
+                kwargs['stdout'].write(payload)
+                return subprocess.CompletedProcess(args, 0)
+            self.assertIn('pg_restore', args)
+            # A real process reads the inherited OS descriptor; replacing this
+            # with stream.read() would hide Python buffered read-ahead bugs.
+            result = original_run([sys.executable, '-c',
+                                   "import sys; assert sys.stdin.buffer.read(5) == b'PGDMP'"], **kwargs)
+            child_seen.append(result.returncode)
+            return result
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(backup.subprocess, 'run', real_child):
+                backup.dump_database('isolated-fixture', Path(directory) / 'database.dump')
+        self.assertEqual(child_seen, [0])
 
 
 if __name__ == '__main__':

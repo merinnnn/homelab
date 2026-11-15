@@ -96,7 +96,9 @@ def dump_database(cid, output):
     with output.open('rb') as stream:
         if stream.read(5) != b'PGDMP':
             raise RuntimeError('Expected a PostgreSQL custom-format dump')
-        stream.seek(0)
+    # Reopen rather than rewinding a buffered reader: read-ahead can leave the
+    # underlying descriptor after the header when a child inherits it as stdin.
+    with output.open('rb') as stream:
         subprocess.run(['docker', 'exec', '-i', cid, 'pg_restore', '--list'], stdin=stream,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=60)
 
