@@ -226,14 +226,14 @@ def bootstrap(client, services, private=PRIVATE, client_factory=Client):
     require(board.get('id') == state.get('board_id') and board.get('name') == BOARD_NAME,
             'Board ownership differs')
     board = remove_initial_seed_items(client, board, services, state)
-    verify_links(client, board, services)
+    verify_links(client, board, services, allow_additional=state.get('board_verified') is True)
     if not board.get('isPublic'):
         client.rpc('board.changeBoardVisibility', {'id': board['id'], 'visibility': 'public'}, mutation=True)
     anonymous = client_factory(client.base)
     public_board = anonymous.rpc('board.getBoardByName', {'name': BOARD_NAME})
     require(public_board.get('id') == board['id'] and public_board.get('isPublic') is True,
             'Read-only public board unavailable')
-    verify_links(anonymous, public_board, services)
+    verify_links(anonymous, public_board, services, allow_additional=state.get('board_verified') is True)
     status, _ = anonymous.request('/api/onboarding/claim', {}, 'POST')
     require(status in (403, 409), 'Finished onboarding is claimable')
     require_denied(anonymous, 'board.changeBoardVisibility', {'id': board['id'], 'visibility': 'public'})
@@ -243,7 +243,7 @@ def bootstrap(client, services, private=PRIVATE, client_factory=Client):
     if not state.get('board_verified'):
         state['board_verified'] = True
         replace_private(state_path, state)
-    print('PASS Homarr administrator, completed onboarding, seven public read-only links, denied writes and wrong password')
+    print('PASS Homarr administrator, completed onboarding, seven original public service links, denied writes and wrong password')
 
 
 def remove_initial_seed_items(client, board, services, state):
@@ -254,6 +254,10 @@ def remove_initial_seed_items(client, board, services, state):
     Never prune a board after successful verification or public activation.
     """
     entries = board.get('items', [])
+    # A verified board belongs to its user. Later apps/widgets are never seed
+    # cleanup candidates; original service provenance is checked separately.
+    if state.get('board_verified') is True:
+        return board
     if len(entries) == 7:
         return board
     require(state.get('phase') == 'finished' and not state.get('board_verified')
@@ -327,8 +331,23 @@ def require_denied(client, procedure, payload):
             'Anonymous configuration write was accepted')
 
 
-def verify_links(client, board, services):
+def verify_links(client, board, services, allow_additional=False):
     items = board.get('items', [])
+    if allow_additional:
+        original = {'onboarding_app_' + hashlib.sha256(app['sourceId'].encode()).hexdigest()[:32]: app
+                    for app in services}
+        original_cards = [item for item in items if item.get('kind') == 'app'
+                          and item.get('options', {}).get('appId') in original]
+        ids = [item['options']['appId'] for item in original_cards]
+        require(len(original) == 7 and len(ids) == 7 and len(set(ids)) == 7,
+                'Original service card provenance differs')
+        rows = client.rpc('app.byIds', ids)
+        require(len(rows) == 7 and len({row.get('id') for row in rows}) == 7
+                and all(row.get('id') in original
+                        and row.get('name') == original[row['id']]['name']
+                        and row.get('href') == original[row['id']]['href'] for row in rows),
+                'Original persisted service links differ')
+        return
     require(len(items) == 7 and all(item.get('kind') == 'app' for item in items), 'Board content differs')
     app_ids = [item.get('options', {}).get('appId') for item in items]
     require(all(isinstance(app_id, str) for app_id in app_ids) and len(set(app_ids)) == 7, 'Board app IDs differ')

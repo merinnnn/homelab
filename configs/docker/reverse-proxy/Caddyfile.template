@@ -62,3 +62,8 @@ grafana.@DOMAIN@ {
     tls internal
     reverse_proxy http://homelab-grafana:3000
 }
+
+n8n.@DOMAIN@ {
+    tls internal
+    reverse_proxy http://homelab-n8n:5678
+}

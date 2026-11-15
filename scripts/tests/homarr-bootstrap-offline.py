@@ -212,9 +212,61 @@ class BootstrapTests(unittest.TestCase):
     def test_seed_cleanup_never_runs_after_verified_board(self):
         c, p = self.seeded_fixture()
         p.files['bootstrap.json']['board_verified'] = True
+        before = copy.deepcopy(c.server['board']['items'])
+        self.run_bootstrap(c.factory(c.base), p)
+        self.assertEqual(c.server['board']['items'], before)
+        self.assertNotIn(('MUTATE', 'board.saveBoard'), c.server['calls'])
+    def extended_fixture(self):
+        c, p = FakeClient(), Private()
+        self.run_bootstrap(c, p)
+        c.server['apps'].append({'id': 'later-n8n', 'name': 'n8n', 'href': 'https://n8n.home.arpa/'})
+        c.server['board']['items'].extend([
+            {'id': 'later-card', 'kind': 'app', 'options': {'appId': 'later-n8n', 'openIn': 'newTab'}},
+            {'id': 'user-clock', 'kind': 'clock', 'options': {'customTitle': 'My clock'}}])
+        c.server['calls'].clear()
+        return c, p
+    def test_verified_repeat_preserves_n8n_widget_and_private_provenance(self):
+        c, p = self.extended_fixture()
+        before_board, before_private = copy.deepcopy(c.server['board']), copy.deepcopy(p.files)
+        self.run_bootstrap(c.factory(c.base), p)
+        self.assertEqual(c.server['board'], before_board)
+        self.assertEqual(p.files, before_private)
+        self.assertFalse(any(kind == 'MUTATE' for kind, _ in c.server['calls']))
+    def test_verified_extra_cards_do_not_hide_missing_original(self):
+        c, p = self.extended_fixture()
+        c.server['board']['items'].pop(0)
         with self.assertRaises(h.Refused):
             self.run_bootstrap(c.factory(c.base), p)
-        self.assertNotIn(('MUTATE', 'board.saveBoard'), c.server['calls'])
+        self.assertFalse(any(kind == 'MUTATE' for kind, _ in c.server['calls']))
+    def test_verified_same_url_replacement_cannot_fake_original_provenance(self):
+        c, p = self.extended_fixture()
+        app = c.server['apps'][0]
+        old_id = app['id']
+        app['id'] = 'replaced-with-same-name-and-url'
+        next(item for item in c.server['board']['items'] if item.get('options', {}).get('appId') == old_id)['options']['appId'] = app['id']
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertFalse(any(kind == 'MUTATE' for kind, _ in c.server['calls']))
+    def test_verified_original_name_drift_refused_with_extras(self):
+        c, p = self.extended_fixture()
+        c.server['apps'][0]['name'] = 'Changed original'
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertFalse(any(kind == 'MUTATE' for kind, _ in c.server['calls']))
+    def test_verified_duplicate_original_card_refused(self):
+        c, p = self.extended_fixture()
+        duplicate = copy.deepcopy(c.server['board']['items'][0])
+        duplicate['id'] = 'duplicate-original-card'
+        c.server['board']['items'].append(duplicate)
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertFalse(any(kind == 'MUTATE' for kind, _ in c.server['calls']))
+    def test_unverified_extra_widget_never_enters_permissive_repeat(self):
+        c, p = self.extended_fixture()
+        p.files['bootstrap.json'].pop('board_verified')
+        with self.assertRaises(h.Refused):
+            self.run_bootstrap(c.factory(c.base), p)
+        self.assertFalse(any(kind == 'MUTATE' for kind, _ in c.server['calls']))
     def test_seed_cleanup_never_runs_on_public_board(self):
         c, p = self.seeded_fixture()
         c.server['board']['isPublic'] = True

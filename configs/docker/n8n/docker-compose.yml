@@ -1,0 +1,136 @@
+services:
+  postgres:
+    image: ${N8N_POSTGRES_IMAGE:?resolved official Postgres image required}
+    labels:
+      io.homelab.managed: n8n-v1
+    env_file:
+      - path: ${N8N_SECRET_DIR:?private configuration required}/postgres.env
+        format: raw
+    command: [postgres, -c, shared_buffers=32MB, -c, max_connections=30, -c, work_mem=4MB, -c, log_min_messages=warning]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [database]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    pids_limit: 128
+    shm_size: 32m
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U n8n -d n8n -h 127.0.0.1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    logging: &logging
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  n8n:
+    image: ${N8N_IMAGE:?resolved official n8n image required}
+    labels:
+      io.homelab.managed: n8n-v1
+    env_file:
+      - path: ${N8N_SECRET_DIR}/n8n.env
+        format: raw
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: '5432'
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_POOL_SIZE: '5'
+      N8N_HOST: n8n.home.arpa
+      N8N_PORT: '5678'
+      N8N_PROTOCOL: https
+      N8N_PROXY_HOPS: '1'
+      N8N_WEBHOOK_URL: https://n8n.home.arpa/
+      N8N_EDITOR_BASE_URL: https://n8n.home.arpa/
+      N8N_SECURE_COOKIE: 'true'
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: 'true'
+      N8N_RUNNERS_MODE: external
+      N8N_RUNNERS_BROKER_LISTEN_ADDRESS: 0.0.0.0
+      N8N_RUNNERS_MAX_CONCURRENCY: '2'
+      N8N_CONCURRENCY_PRODUCTION_LIMIT: '2'
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_VERSION_NOTIFICATIONS_ENABLED: 'false'
+      N8N_TEMPLATES_ENABLED: 'false'
+      N8N_COMMUNITY_PACKAGES_ENABLED: 'false'
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: 'true'
+      N8N_BLOCK_FILE_ACCESS_TO_N8N_FILES: 'true'
+      N8N_DEFAULT_BINARY_DATA_MODE: filesystem
+      EXECUTIONS_DATA_PRUNE: 'true'
+      EXECUTIONS_DATA_MAX_AGE: '168'
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: '1000'
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: none
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_TIMEOUT: '300'
+      EXECUTIONS_TIMEOUT_MAX: '600'
+      N8N_LOG_LEVEL: warn
+      NODE_OPTIONS: --max-old-space-size=384
+      GENERIC_TIMEZONE: Europe/London
+      TZ: Europe/London
+      NODE_EXTRA_CA_CERTS: /etc/ssl/homelab-root.crt
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - type: bind
+        source: ${N8N_CA_FILE:?public Caddy root required}
+        target: /etc/ssl/homelab-root.crt
+        read_only: true
+        bind: {create_host_path: false}
+    dns: [192.168.1.210, 192.168.1.150, 192.168.1.1]
+    networks:
+      database: {}
+      runners: {aliases: [n8n-broker]}
+      proxy: {aliases: [homelab-n8n]}
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,mode=1777']
+    mem_limit: 640m
+    pids_limit: 256
+    stop_grace_period: 90s
+    healthcheck:
+      test: [CMD, node, -e, "require('http').get('http://127.0.0.1:5678/healthz/readiness',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    logging: *logging
+  runners:
+    image: ${N8N_RUNNERS_IMAGE:?matching resolved official runner image required}
+    labels:
+      io.homelab.managed: n8n-v1
+    env_file:
+      - path: ${N8N_SECRET_DIR}/runners.env
+        format: raw
+    environment:
+      N8N_RUNNERS_TASK_BROKER_URI: http://n8n-broker:5679
+      N8N_RUNNERS_MAX_CONCURRENCY: '2'
+      N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT: '15'
+      N8N_RUNNERS_MAX_OLD_SPACE_SIZE: '128'
+      TZ: Europe/London
+    networks: [runners]
+    depends_on:
+      n8n: {condition: service_healthy}
+    restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: ['/tmp:rw,noexec,nosuid,size=64m,mode=1777']
+    mem_limit: 256m
+    pids_limit: 128
+    stop_grace_period: 90s
+    healthcheck:
+      test: [CMD, node, -e, "require('http').get('http://127.0.0.1:5680/healthz',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    logging: *logging
+networks:
+  database: {internal: true}
+  runners: {}
+  proxy: {external: true, name: homelab-proxy_default}
+volumes:
+  postgres-data: {external: true, name: homelab-n8n-postgres-data}
+  n8n-data: {external: true, name: homelab-n8n-data}

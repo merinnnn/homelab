@@ -29,11 +29,16 @@ jobs:
           MONITORING_PRIVATE_DIR: /etc/homelab/monitoring
           HOMARR_IMAGE: ghcr.io/homarr-labs/homarr:v2.10.1
           HOMARR_SECRET_DIR: /etc/homelab/homarr
+          N8N_IMAGE: docker.n8n.io/n8nio/n8n:2.47.7
+          N8N_RUNNERS_IMAGE: n8nio/runners:2.47.7
+          N8N_POSTGRES_IMAGE: postgres:16.16-alpine
+          N8N_SECRET_DIR: /etc/homelab/n8n
+          N8N_CA_FILE: /opt/homelab/reverse-proxy/root.crt
           CADDY_IMAGE: caddy:2.11.7-alpine
           PROXY_BIND_IP: 127.0.0.1
           PROXY_STACK_DIR: /opt/homelab/reverse-proxy
         run: |
-          find configs/docker -name "docker-compose.yml" -type f -print0 | xargs -0 -r -I {} docker compose -f "{}" config
+          find configs/docker -name "docker-compose.yml" -type f -print0 | xargs -0 -r -I {} docker compose -f "{}" config --no-env-resolution --quiet
 
       - name: Test offline behavior
         run: node scripts/tests/offline-behavior.cjs
@@ -71,3 +76,10 @@ jobs:
 
       - name: Test private Telegram receiver setup
         run: python3 scripts/tests/telegram-offline.py
+
+      - name: Test n8n deployment, account and backup behavior
+        run: |
+          bash scripts/tests/n8n-offline.sh
+          python3 scripts/tests/n8n-bootstrap-offline.py
+          python3 scripts/tests/n8n-backup-offline.py
+          python3 scripts/tests/homarr-n8n-link-offline.py
