@@ -42,6 +42,20 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
+def required_folders(folders):
+    """Normalize only Supervisor's documented local-app folder rename.
+
+    Core's v1 API exposes addons/local; raw current Supervisor archives contain
+    apps/local. Empty existing folders are archived, so missing parts still fail.
+    """
+    require(isinstance(folders, list) and all(isinstance(folder, str) for folder in folders),
+            'Invalid native backup folder metadata')
+    normalized = ['addons/local' if folder == 'apps/local' else folder for folder in folders]
+    require(len(normalized) == len(set(normalized)), 'Duplicate native backup folder aliases')
+    require(set(normalized) == set(FOLDERS), 'Native backup lacks required folders or contains unknown folders')
+    return normalized
+
+
 def private_path(path, directory=False):
     info = path.lstat()
     require(stat.S_ISDIR(info.st_mode) if directory else stat.S_ISREG(info.st_mode),
@@ -126,7 +140,7 @@ def validate_backup_metadata(backup):
             'Invalid native backup identifier')
     require(backup.get('homeassistant_included') is True and backup.get('database_included') is True,
             'Native backup lacks Home Assistant or database')
-    require(set(FOLDERS).issubset(backup.get('folders', [])), 'Native backup lacks required folders')
+    required_folders(backup.get('folders', []))
     require(all(not backup.get(key) for key in ('failed_addons', 'failed_folders', 'failed_agent_ids')),
             'Native backup reported incomplete parts')
     agent = backup.get('agents', {}).get(AGENT, {})
@@ -135,7 +149,7 @@ def validate_backup_metadata(backup):
     return backup_id
 
 
-def inspect_archive(path, expected_id=None):
+def inspect_archive(path, expected_id=None, require_supervisor=False):
     """Validate safe outer tar and encryption headers, without extracting data.
 
     This is structural evidence, not proof of successful decryption or restore.
@@ -163,10 +177,17 @@ def inspect_archive(path, expected_id=None):
         home = metadata.get('homeassistant')
         require(isinstance(home, dict) and home.get('exclude_database') is False,
                 'Archive omits Home Assistant database')
-        require(set(FOLDERS).issubset(metadata.get('folders', [])), 'Archive omits required folders')
-        expected = {'backup.json', 'homeassistant.tar.gz', 'supervisor.tar.gz'}
+        required_folders(metadata.get('folders', []))
+        expected = {'backup.json', 'homeassistant.tar.gz'}
         expected.update(f"{folder.replace('/', '_')}.tar.gz" for folder in metadata['folders'])
         expected.update(f"{addon['slug']}.tar.gz" for addon in metadata.get('addons', []))
+        # Stable Supervisor intentionally omits this component if neither
+        # network mounts nor private Docker registries are configured.
+        supervisor_included = 'supervisor.tar.gz' in members
+        require(not require_supervisor or supervisor_included,
+                'Archive omits required Supervisor configuration')
+        if supervisor_included:
+            expected.add('supervisor.tar.gz')
         require(set(members) == expected, 'Archive components disagree with metadata')
         versions = set()
         for name, member in members.items():
@@ -185,11 +206,13 @@ def inspect_archive(path, expected_id=None):
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     return {'bytes': path.stat().st_size, 'sha256': digest, 'components': len(members)-1,
             'encrypted': True, 'cipher_header_versions': sorted(versions),
+            'supervisor_configuration_included': supervisor_included,
             'homeassistant_and_database': True, 'structural_validation': True,
             'decryption_tested': False, 'restore_tested': False}
 
 
-def create(client, private_dir, backup_dir, timeout=1800, pause=time.sleep, clock=time.monotonic):
+def create(client, private_dir, backup_dir, timeout=1800, pause=time.sleep, clock=time.monotonic,
+           require_supervisor=False):
     private_path(private_dir, directory=True)
     password = load_password(private_dir)
     private_path(private_dir / 'backup-managed.json')
@@ -228,7 +251,7 @@ def create(client, private_dir, backup_dir, timeout=1800, pause=time.sleep, cloc
     result = client.download(f'/api/backup/download/{backup_id}?agent_id={AGENT}', target,
                              max_bytes=max(expected_size*2, 10*1024*1024))
     private_path(target)
-    evidence = inspect_archive(target, backup_id)
+    evidence = inspect_archive(target, backup_id, require_supervisor=require_supervisor)
     require(evidence['bytes'] == expected_size and result['sha256'] == evidence['sha256'],
             'Backup export length or checksum differs from native metadata')
     private_write(target.with_suffix('.tar.sha256'), evidence['sha256'] + '  ' + target.name + '\n')
@@ -250,6 +273,8 @@ def main():
     parser.add_argument('--private-dir', type=Path, default=PRIVATE)
     parser.add_argument('--backup-dir', type=Path, default=BACKUPS)
     parser.add_argument('--archive', type=Path)
+    parser.add_argument('--require-supervisor', action='store_true',
+                        help='Require Supervisor configuration when network mounts/private registries exist')
     parser.add_argument('--base-url')
     parser.add_argument('--ca-file')
     parser.add_argument('--connect-ip')
@@ -258,7 +283,7 @@ def main():
     os.umask(0o077)
     if args.action == 'inspect':
         require(args.archive is not None, 'Archive path required')
-        result = inspect_archive(args.archive)
+        result = inspect_archive(args.archive, require_supervisor=args.require_supervisor)
     else:
         import fcntl
         private_path(args.private_dir, directory=True)
@@ -271,7 +296,8 @@ def main():
             client, _token = runtime_module().authenticated_client(args.private_dir,
                 base_url=args.base_url, ca_file=args.ca_file, connect_ip=args.connect_ip)
             result = (configure(client, args.private_dir) if args.action == 'configure' else
-                      create(client, args.private_dir, args.backup_dir))
+                      create(client, args.private_dir, args.backup_dir,
+                             require_supervisor=args.require_supervisor))
     print(json.dumps(result, sort_keys=True))
 
 

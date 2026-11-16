@@ -91,4 +91,5 @@ jobs:
         run: |
           python3 scripts/tests/home-assistant-runtime-offline.py
           python3 scripts/tests/home-assistant-backup-offline.py
+          python3 scripts/tests/home-assistant-verifier-offline.py
           python3 scripts/tests/homarr-home-assistant-link-offline.py

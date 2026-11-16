@@ -43,14 +43,18 @@ class Client:
         raise AssertionError(command)
 
 
-def make_archive(path, *, encrypted=True, missing=False, unsafe=False, protected=True, wrong_id=False):
+def make_archive(path, *, encrypted=True, missing=False, unsafe=False, protected=True,
+                 wrong_id=False, folders=None, supervisor=True):
+    folders = list(backup.FOLDERS if folders is None else folders)
     metadata = {'slug': 'sample1' if not wrong_id else 'wrong', 'type': 'partial',
                 'protected': protected, 'compressed': True,
                 'homeassistant': {'version': '2026.11.1', 'exclude_database': False},
-                'folders': backup.FOLDERS, 'addons': []}
+                'folders': folders, 'addons': []}
     with tarfile.open(path, 'w') as archive:
         parts = {'./backup.json': json.dumps(metadata).encode()}
-        names = ['homeassistant', 'supervisor', 'share', 'ssl', 'media', 'addons_local']
+        names = ['homeassistant'] + [folder.replace('/', '_') for folder in folders]
+        if supervisor:
+            names.append('supervisor')
         if missing:
             names.remove('homeassistant')
         for name in names:
@@ -134,6 +138,37 @@ class BackupTests(unittest.TestCase):
             make_archive(path, **kwargs)
             with self.assertRaises(RuntimeError):
                 backup.inspect_archive(path, 'sample1')
+
+    def test_current_supervisor_folder_alias_and_optional_configuration(self):
+        path = self.root/'current.tar'
+        folders = ['share', 'ssl', 'media', 'apps/local']
+        make_archive(path, folders=folders, supervisor=False)
+        result = backup.inspect_archive(path, 'sample1')
+        self.assertEqual(result['components'], 5)
+        self.assertFalse(result['supervisor_configuration_included'])
+        with self.assertRaisesRegex(RuntimeError, 'Supervisor configuration'):
+            backup.inspect_archive(path, 'sample1', require_supervisor=True)
+        make_archive(path, folders=folders, supervisor=True)
+        self.assertTrue(backup.inspect_archive(path, require_supervisor=True)
+                        ['supervisor_configuration_included'])
+
+    def test_alias_support_does_not_accept_omitted_or_duplicate_folders(self):
+        for folders in (['share', 'ssl', 'apps/local'],
+                        ['share', 'ssl', 'media'],
+                        ['share', 'ssl', 'media', 'addons/local', 'apps/local']):
+            path = self.root/'bad-folders.tar'
+            make_archive(path, folders=folders, supervisor=False)
+            with self.assertRaises(RuntimeError):
+                backup.inspect_archive(path)
+
+    def test_native_metadata_accepts_only_documented_alias(self):
+        metadata = {'backup_id': 'sample1', 'homeassistant_included': True,
+            'database_included': True, 'folders': ['share', 'ssl', 'media', 'apps/local'],
+            'agents': {backup.AGENT: {'protected': True, 'size': 12345}}}
+        self.assertEqual(backup.validate_backup_metadata(metadata), 'sample1')
+        metadata['folders'] = ['share', 'ssl', 'media', 'unknown/local']
+        with self.assertRaises(RuntimeError):
+            backup.validate_backup_metadata(metadata)
 
     def test_metadata_rejects_failed_parts(self):
         metadata = {'backup_id': 'sample1', 'homeassistant_included': True,

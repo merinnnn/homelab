@@ -36,8 +36,8 @@ class HTTPS(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(sock, server_hostname=HOST)
 
 
-def get(context, path, token=None, http=False):
-    connection = http.client.HTTPConnection(PROXY, 80, timeout=30) if http else HTTPS(context)
+def get(context, path, token=None, plain_http=False):
+    connection = http.client.HTTPConnection(PROXY, 80, timeout=30) if plain_http else HTTPS(context)
     headers = {'Host': HOST}
     if token:
         headers['Authorization'] = 'Bearer ' + token
@@ -73,7 +73,7 @@ def run(private=PRIVATE):
     status, headers, body = get(context, '/')
     check('HTTPS frontend and TLS hostname verification', status == 200)
     check('frontend document contains Home Assistant', b'home-assistant' in body.lower())
-    status, headers, _ = get(context, '/', http=True)
+    status, headers, _ = get(context, '/', plain_http=True)
     check('HTTP redirects to same HTTPS origin', status in (301, 302, 307, 308) and
           headers.get('location') in ('https://ha.home.arpa', 'https://ha.home.arpa/'))
     for path in ('/api/', '/api/config', '/api/states'):
