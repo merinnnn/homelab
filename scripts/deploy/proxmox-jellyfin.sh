@@ -123,6 +123,10 @@ EOF
     mounted
     pct set "$id" --mp0 "$base/Jellyfin,mp=/srv/media,ro=1,backup=0,replicate=0"
     pct start "$id"
+    ;;&
+attach|libraries)
+    owned
+    mounted
     pct exec "$id" -- runuser -u jellyfin -- test -r '/srv/media/TV Shows'
     guest_helper libraries
     ;;
@@ -152,5 +156,5 @@ verify)
     pct exec "$id" -- runuser -u jellyfin -- test -r '/srv/media/TV Shows'
     guest_helper verify
     ;;
-*) echo 'Usage: proxmox-jellyfin.sh install|install-guest|attach|publish|verify' >&2; exit 2 ;;
+*) echo 'Usage: proxmox-jellyfin.sh install|install-guest|attach|libraries|publish|verify' >&2; exit 2 ;;
 esac

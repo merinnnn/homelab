@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 import stat
+import subprocess
 import time
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -120,7 +121,7 @@ def libraries(token, create):
     entries = req(base, token=token)
     for name, (kind, folder) in LIBRARIES.items():
         found = [item for item in entries if item.get("Name") == name]
-        if not Path(folder).is_dir():
+        if subprocess.run(["runuser", "-u", "jellyfin", "--", "test", "-d", folder], check=False).returncode:
             raise RuntimeError(f"Missing mounted library folder: {name}")
         if not found:
             if not create:
