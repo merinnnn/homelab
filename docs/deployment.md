@@ -1,5 +1,9 @@
 # Deploy from each Proxmox repository checkout
 
+## Jellyfin - 16 November 2026
+
+Jellyfin CT103 on pve01 joins the prior four permanent guests. Verify from /root/homelab with bash scripts/deploy/proxmox-jellyfin.sh verify. Media mount and safe disconnect details are in [Jellyfin](jellyfin.md). Keep the existing internal disk and dedicated SSD mount; failures are not permission to reset or reformat.
+
 ## Home Assistant handoff — 16 November 2026, verified local deployment
 
 Read [Home Assistant](home-assistant.md) before changing the new permanent guest. Current permanent resources supersede the earlier 15 November table below:

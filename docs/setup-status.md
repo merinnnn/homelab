@@ -1,3 +1,9 @@
+# Jellyfin extension - 16 November 2026
+
+Jellyfin is deployed on pve01 CT103 with the USB SSD restricted to the approved new media folder. Native pinned packages, private admin/closed wizard, trusted HTTPS, authenticated WebSocket, direct stream range and checksum, H.264 Intel VA-API transcode, missing-mount refusal, and recovery of unchanged server identity and libraries passed. Existing files were not exposed. Physical power recovery, TV client playback and actual backup restore were not tested. See [Jellyfin](jellyfin.md) and the dated Obsidian report.
+
+---
+
 # Latest Home Assistant setup — 16 November 2026
 
 **Local deployment complete.** Dedicated permanent pve01 VM102 ha01 runs HAOS 18.4 / Core 2026.11.1, 2 vCPU / 4 GiB / 32 GiB, MAC BC:24:11:32:8F:61, static/reserved 192.168.1.211/24 on vmbr0, gateway 192.168.1.1. Guest OS DNS is 192.168.1.210/192.168.1.150/94.140.14.14; router reservation was saved/reopened and accepted household AdGuard-first DNS remains unchanged. Supervisor 2026.11.0 was observed.

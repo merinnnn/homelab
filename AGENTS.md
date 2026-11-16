@@ -1,5 +1,9 @@
 # Homelab working instructions
 
+## Jellyfin - 16 November 2026
+
+Jellyfin CT103 (jellyfin01) on pve01 is permanent. Read docs/jellyfin.md before changing it. Preserve its internal data, root-only account, exact SSD UUID 2627-3DAE and read-only Jellyfin-only bind. Never create an underlying Jellyfin placeholder, format the SSD, expose old folders, or replay the install/attach actions as diagnostics. Verified restart and missing-mount refusal; use the private jellyfin credential entry. The following dated counts are historical.
+
 ## Latest Home Assistant handoff — 16 November 2026
 
 Local deployment and acceptance passed. Read docs/home-assistant.md and current setup-status before mutation. Permanent pve01 VM102 ha01 joins the existing three permanent guests: 2 vCPU / 4 GiB / 32 GiB, MAC BC:24:11:32:8F:61, vmbr0 static/reserved 192.168.1.211/24, gateway 192.168.1.1, guest OS DNS 192.168.1.210 / 192.168.1.150 / 94.140.14.14. Router reservation was saved/reopened; accepted household AdGuard-first DNS is unchanged. HAOS 18.4 / Core 2026.11.1; Supervisor 2026.11.0 was observed.

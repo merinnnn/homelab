@@ -40,12 +40,15 @@ def req(path, body=None, token=None, method=None, status=200):
         raise RuntimeError(f"HTTP {e.code} at {path.split('?')[0]}") from None
 
 
-def public_info():
+def public_info(require_closed=False):
     for _ in range(45):
         try:
-            return req("/System/Info/Public")
+            info = req("/System/Info/Public")
+            if not require_closed or info.get("StartupWizardCompleted") is True:
+                return info
         except (URLError, TimeoutError, RuntimeError):
-            time.sleep(2)
+            pass
+        time.sleep(2)
     raise RuntimeError("Jellyfin did not become ready")
 
 
@@ -136,9 +139,7 @@ def libraries(token, create):
 
 
 def verify(create=False):
-    info = public_info()
-    if info.get("StartupWizardCompleted") is not True:
-        raise RuntimeError("Setup is not closed")
+    info = public_info(require_closed=True)
     for path in ("/Users/Me", "/Startup/User"):
         try:
             req(path)

@@ -1,5 +1,9 @@
 # Homelab Infrastructure
 
+## Jellyfin - 16 November 2026
+
+[Jellyfin](https://jellyfin.home.arpa/) now runs in its own pve01 container with an external 1 TB SSD. Only the new Jellyfin media folder is visible to the container, read-only. See [Jellyfin storage and recovery](docs/jellyfin.md). The setup now has five permanent guests and twelve local HTTPS endpoints.
+
 ## Home Assistant extension — 16 November 2026
 
 [Home Assistant](https://ha.home.arpa/) now runs in dedicated permanent VM102, ha01, on pve01: 2 vCPU / 4 GiB / 32 GiB, HAOS 18.4 / Core 2026.11.1. Its static/reserved address is 192.168.1.211/24, MAC BC:24:11:32:8F:61, gateway 192.168.1.1; guest OS DNS uses 192.168.1.210, 192.168.1.150 and 94.140.14.14. [Direct local HTTP access](http://192.168.1.211/) remains available when pve02/apps01/Caddy is unavailable while pve01/ha01 and LAN survive. See [Home Assistant deployment and recovery](docs/home-assistant.md).

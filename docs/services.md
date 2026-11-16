@@ -1,3 +1,9 @@
+# Jellyfin extension - 16 November 2026
+
+Jellyfin 12.4.0 is live at https://jellyfin.home.arpa/ on pve01 CT103 (jellyfin01), 2 vCPU / 1536 MiB / 24 GiB, static 192.168.1.9/24 outside DHCP. It serves only new media folders on the USB SSD, read-only. Homarr has 10 cards, both Pi-holes 19 desired records, and all 12 HTTPS pages passed. Prior ten apps01 containers are unchanged. See [Jellyfin](jellyfin.md).
+
+---
+
 # Current Home Assistant extension — 16 November 2026
 
 Local deployment and acceptance passed; the 15 November inventory below is historical where counts differ.

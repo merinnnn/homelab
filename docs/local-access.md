@@ -1,5 +1,9 @@
 # Local service names and reverse proxy
 
+## Jellyfin - 16 November 2026
+
+https://jellyfin.home.arpa/ is the twelfth Caddy route, to 192.168.1.9:8096. jellyfin01.home.arpa is the direct infrastructure name. 192.168.1.9 is outside the DHCP pool, and both Pi-holes retain 19 local records. The LAN address is available directly if the proxy is down while pve01, the SSD and LAN survive. The accepted router DNS, Windows NRPT and CA are unchanged.
+
 ## Current extension — 16 November 2026, verified local deployment
 
 Home Assistant adds a fourth permanent static/reserved guest and the eleventh HTTPS site. The earlier three-guest migration examples and dated counts below are historical; do not apply the Debian static-network helper to HAOS.
