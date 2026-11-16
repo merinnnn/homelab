@@ -15,6 +15,8 @@
     "home.home.arpa": "192.168.1.58",
     "vault.home.arpa": "192.168.1.58",
     "grafana.home.arpa": "192.168.1.58",
-    "n8n.home.arpa": "192.168.1.58"
+    "n8n.home.arpa": "192.168.1.58",
+    "ha.home.arpa": "192.168.1.58",
+    "ha01.home.arpa": "192.168.1.211"
   }
 }

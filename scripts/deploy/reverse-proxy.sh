@@ -25,7 +25,7 @@ verify_endpoints() {
     openssl x509 -in "$ROOT/.root.crt.next" -noout >/dev/null || return 1
     install -m 0644 "$ROOT/.root.crt.next" "$ROOT/root.crt" || return 1
     rm "$ROOT/.root.crt.next"
-    for name in pve01 pve02 pihole01 pihole02 uptime proxy home vault grafana n8n; do
+    for name in pve01 pve02 pihole01 pihole02 uptime proxy home vault grafana n8n ha; do
         uri=/; [[ "$name" != pihole* ]] || uri=/admin/
         curl --noproxy '*' --fail --silent --show-error --location --connect-timeout 5 --max-time 30 \
             --resolve "$name.$domain:443:$bind" --cacert "$ROOT/root.crt" "https://$name.$domain$uri" >/dev/null || return 1

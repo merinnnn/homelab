@@ -86,3 +86,9 @@ jobs:
 
       - name: Test Home Assistant VM ownership and failure behavior
         run: python3 scripts/tests/home-assistant-vm.py
+
+      - name: Test Home Assistant account, transport, backups and dashboard link
+        run: |
+          python3 scripts/tests/home-assistant-runtime-offline.py
+          python3 scripts/tests/home-assistant-backup-offline.py
+          python3 scripts/tests/homarr-home-assistant-link-offline.py

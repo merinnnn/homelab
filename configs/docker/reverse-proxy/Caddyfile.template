@@ -67,3 +67,8 @@ n8n.@DOMAIN@ {
     tls internal
     reverse_proxy http://homelab-n8n:5678
 }
+
+ha.@DOMAIN@ {
+    tls internal
+    reverse_proxy http://192.168.1.211:80
+}
