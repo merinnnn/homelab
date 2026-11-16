@@ -93,3 +93,6 @@ jobs:
           python3 scripts/tests/home-assistant-backup-offline.py
           python3 scripts/tests/home-assistant-verifier-offline.py
           python3 scripts/tests/homarr-home-assistant-link-offline.py
+
+      - name: Test Jellyfin dashboard link
+        run: python3 scripts/tests/homarr-jellyfin-link-offline.py

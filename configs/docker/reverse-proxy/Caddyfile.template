@@ -72,3 +72,8 @@ ha.@DOMAIN@ {
     tls internal
     reverse_proxy http://192.168.1.211:80
 }
+
+jellyfin.@DOMAIN@ {
+    tls internal
+    reverse_proxy http://192.168.1.9:8096
+}

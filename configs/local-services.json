@@ -17,6 +17,8 @@
     "grafana.home.arpa": "192.168.1.58",
     "n8n.home.arpa": "192.168.1.58",
     "ha.home.arpa": "192.168.1.58",
-    "ha01.home.arpa": "192.168.1.211"
+    "ha01.home.arpa": "192.168.1.211",
+    "jellyfin.home.arpa": "192.168.1.58",
+    "jellyfin01.home.arpa": "192.168.1.9"
   }
 }
