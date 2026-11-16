@@ -505,12 +505,12 @@ def bootstrap(directory):
 def set_hostname(directory):
     address, _ = owned_endpoint()
     client, _ = authenticated_client(directory, base_url="http://" + address)
-    current = client.command("hassio/api", endpoint="/host/info", method="get")
+    current = client.command("supervisor/api", endpoint="/host/info", method="get")
     if current.get("hostname") not in ("homeassistant", "ha01"):
         raise SafeError("Existing Home Assistant hostname differs from the fresh installation")
     if current.get("hostname") != "ha01":
-        client.command("hassio/api", endpoint="/host/options", method="post", data={"hostname": "ha01"})
-    if client.command("hassio/api", endpoint="/host/info", method="get").get("hostname") != "ha01":
+        client.command("supervisor/api", endpoint="/host/options", method="post", data={"hostname": "ha01"})
+    if client.command("supervisor/api", endpoint="/host/info", method="get").get("hostname") != "ha01":
         raise SafeError("Home Assistant hostname update was not verified")
     print("Owned Home Assistant hostname verified as ha01")
 

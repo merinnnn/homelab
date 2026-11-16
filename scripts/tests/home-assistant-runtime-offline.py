@@ -255,6 +255,30 @@ class PrivateFileTests(unittest.TestCase):
 
 
 class BootstrapTests(unittest.TestCase):
+    def test_hostname_uses_supervisor_api_namespace(self):
+        client = unittest.mock.Mock()
+        client.command.side_effect = [{"hostname": "homeassistant"}, {}, {"hostname": "ha01"}]
+        with patch.object(R, "owned_endpoint", return_value=("10.0.10.50", "vmbr1")), patch.object(R, "authenticated_client", return_value=(client, "synthetic")), patch("builtins.print"):
+            R.set_hostname(Path("private-test"))
+        self.assertEqual([c.args[0] for c in client.command.call_args_list], ["supervisor/api"] * 3)
+        self.assertEqual(client.command.call_args_list[1].kwargs, {"endpoint": "/host/options", "method": "post", "data": {"hostname": "ha01"}})
+
+    def test_hostname_repeat_does_not_write(self):
+        client = unittest.mock.Mock()
+        client.command.return_value = {"hostname": "ha01"}
+        with patch.object(R, "owned_endpoint", return_value=("10.0.10.50", "vmbr1")), patch.object(R, "authenticated_client", return_value=(client, "synthetic")), patch("builtins.print"):
+            R.set_hostname(Path("private-test"))
+        self.assertEqual(client.command.call_count, 2)
+        self.assertTrue(all(call.kwargs == {"endpoint": "/host/info", "method": "get"} for call in client.command.call_args_list))
+
+    def test_hostname_preserves_unexpected_existing_name(self):
+        client = unittest.mock.Mock()
+        client.command.return_value = {"hostname": "user-custom-name"}
+        with patch.object(R, "owned_endpoint", return_value=("10.0.10.50", "vmbr1")), patch.object(R, "authenticated_client", return_value=(client, "synthetic")), patch("builtins.print"):
+            with self.assertRaises(R.SafeError):
+                R.set_hostname(Path("private-test"))
+        client.command.assert_called_once_with("supervisor/api", endpoint="/host/info", method="get")
+
     def test_owner_marker_written_only_after_claim_login_and_closed_setup(self):
         state = {"steps": {key: False for key in ("user", "core_config", "analytics", "integration")}, "calls": []}
         owner = {"username": "admin", "name": "Homelab Owner", "password": "synthetic-password-32-characters-only"}
