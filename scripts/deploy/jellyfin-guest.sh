@@ -5,12 +5,13 @@ umask 077
 [[ $EUID == 0 && "$(hostname -s)" == jellyfin01 ]]
 . /etc/os-release
 [[ $ID == debian && $VERSION_CODENAME == trixie && $(dpkg --print-architecture) == amd64 ]]
-export DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive LC_ALL=C.UTF-8
 apt-get -qq update
 apt-get -y --no-install-recommends install ca-certificates curl gpg python3
 work=$(mktemp -d)
 trap 'rm -f "$work/key.asc" "$work/key.gpg"; rmdir "$work"' EXIT
 curl --fail --silent --show-error --location --max-time 45 https://repo.jellyfin.org/jellyfin_team.gpg.key -o "$work/key.asc"
+install -d -m 0700 /root/.gnupg
 fpr=$(gpg --batch --no-options --show-keys --with-colons "$work/key.asc" | awk -F: '$1=="pub"{pub=1;next} $1=="fpr" && pub{print $10;pub=0}')
 [[ $fpr == 4918AABC486CA052358D778D49023CD01DE21A7B ]]
 gpg --batch --dearmor --output "$work/key.gpg" "$work/key.asc"

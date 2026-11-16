@@ -59,6 +59,12 @@ install)
         --dev0 path=/dev/dri/renderD128,gid=3001,mode=0660
     owned
     pct start "$id"
+    ;;&
+install|install-guest)
+    owned
+    [[ $(pct status "$id") == 'status: running' ]]
+    grep -q '^net0: .*bridge=vmbr1,' < <(pct config "$id")
+    pct exec "$id" -- test ! -e /etc/homelab/jellyfin/owner.json
     pct push "$id" scripts/deploy/jellyfin-guest.sh /root/homelab-install-jellyfin.sh --perms 600
     pct exec "$id" -- bash /root/homelab-install-jellyfin.sh
     guest_helper bootstrap
@@ -146,5 +152,5 @@ verify)
     pct exec "$id" -- runuser -u jellyfin -- test -r '/srv/media/TV Shows'
     guest_helper verify
     ;;
-*) echo 'Usage: proxmox-jellyfin.sh install|attach|publish|verify' >&2; exit 2 ;;
+*) echo 'Usage: proxmox-jellyfin.sh install|install-guest|attach|publish|verify' >&2; exit 2 ;;
 esac
