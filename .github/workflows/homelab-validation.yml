@@ -83,3 +83,6 @@ jobs:
           python3 scripts/tests/n8n-bootstrap-offline.py
           python3 scripts/tests/n8n-backup-offline.py
           python3 scripts/tests/homarr-n8n-link-offline.py
+
+      - name: Test Home Assistant VM ownership and failure behavior
+        run: python3 scripts/tests/home-assistant-vm.py
