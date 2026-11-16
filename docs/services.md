@@ -1,3 +1,21 @@
+# Current Home Assistant extension — 16 November 2026
+
+Local deployment and acceptance passed; the 15 November inventory below is historical where counts differ.
+
+| Service | Resource | Access | Storage |
+| --- | --- | --- | --- |
+| Home Assistant OS 18.4 / Core 2026.11.1 | pve01 permanent VM102 ha01, 2 vCPU / 4 GiB / 32 GiB | https://ha.home.arpa/ ; direct http://192.168.1.211/ | Original local-lvm system + EFI disks; never reset/reimport |
+
+ha01 is static/reserved 192.168.1.211/24 on vmbr0, MAC BC:24:11:32:8F:61, gateway 192.168.1.1. Guest OS DNS uses both Pi-holes 192.168.1.210/192.168.1.150 and filtered 94.140.14.14. Router reservation was saved and reopened; accepted household AdGuard-first DNS remains unchanged. Supervisor 2026.11.0 was observed.
+
+Current observed access: 17 desired DNS records on both Pi-holes, 11 friendly HTTPS pages with normal Windows DNS/default trust, authenticated HA owner REST/WebSocket, closed onboarding and stable trust of only 192.168.1.58/32 as reverse proxy. Homarr has 9 cards; repeat added 0 while preserving original 8. HA is a separate VM, so apps01 remains 10 containers/10 active Docker volumes plus retained initial PG16 volume. All four service guests are permanent.
+
+The owner `admin` was initialized before LAN publication. pve01 root0700 `/etc/homelab/home-assistant` holds root0600 private owner/auth/bootstrap/recovery files; the desktop private services.json account entry is `homeAssistant`. No secret values belong in Git/notes. Native encrypted daily 04:45 Europe/London backup/export, decryption and wrong-key rejection, private off-node checksum/ACL and graceful HAOS reboot persistence passed. All 30 independent live checks passed. No actual restore or physical power test is claimed. See [Home Assistant](home-assistant.md) for final measured status and recovery boundaries.
+
+Friendly HA access depends on pve02/apps01/Caddy; direct unencrypted HTTP .211 can work while that proxy is absent if pve01/ha01 and LAN survive. This setup did not pair devices/radios, trigger real automations, configure WAN ingress or configure cross-node HA.
+
+---
+
 # Running services — 15 November 2026
 
 Deployments run from `/root/homelab` on each Proxmox host. Both checkouts contain the deployment scripts; guest payloads come from that checkout. Authentication uses normal host configuration. No personal identity material, identity filenames or desktop paths are embedded in scripts.

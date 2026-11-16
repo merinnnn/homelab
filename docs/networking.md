@@ -1,5 +1,15 @@
 # Networking
 
+## Home Assistant network extension — 16 November 2026
+
+The fourth permanent service guest is pve01 VM102 ha01:vmbr0, MAC BC:24:11:32:8F:61, static 192.168.1.211/24, gateway 192.168.1.1. Its matching router reservation was saved and reopened for verification. HAOS guest DNS is 192.168.1.210, 192.168.1.150 and 94.140.14.14. The household router DNS policy remains AdGuard 94.140.14.14 FIRST, then both Pi-holes; independent Pi-hole upstreams are preserved.
+
+Fresh HAOS boot/owner claim occurred on pve01's host-local vmbr1, followed by guarded promotion to vmbr0. Current guest static configuration is authoritative; do not move it back to vmbr1 or replay bootstrap as a check. The original vmbr1 isolation/host-local topology below still applies to other lab resources.
+
+Both Pi-holes now verify 17 desired records: ha.home.arpa points to proxy 192.168.1.58 and direct ha01.home.arpa points to 192.168.1.211. Caddy on apps01 serves https://ha.home.arpa/ to native HTTP 192.168.1.211:80. HA trusts forwarded client IP only from 192.168.1.58/32. Authenticated REST/WebSocket and normal Windows HTTPS/DNS passed. apps01's 10 containers/Docker volumes and accepted router/Windows DNS policies remain unchanged. Graceful HAOS restart/static recovery, native encrypted backup/export, decryption/wrong-key rejection and private off-node checksum/ACL passed.
+
+HA's friendly URL depends on pve02/apps01/Caddy; direct http://192.168.1.211/ uses the surviving HA VM independently of that proxy, over unencrypted trusted-LAN HTTP. Other clients still need local DNS/public-root trust. No WAN rule, cross-node HA or real-device/radio setup was added. Older guest/service counts below are historical; there are now four permanent service guests.
+
 Observed on 1 November 2026: two standalone Proxmox nodes use a home LAN through the RE220/switch. `pve01` is `192.168.1.2/24`, `pve02` is `192.168.1.3/24`, and the upstream gateway is `192.168.1.1`.
 
 ## Bridges

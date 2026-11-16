@@ -1,5 +1,13 @@
 # Homelab Infrastructure
 
+## Home Assistant extension — 16 November 2026
+
+[Home Assistant](https://ha.home.arpa/) now runs in dedicated permanent VM102, ha01, on pve01: 2 vCPU / 4 GiB / 32 GiB, HAOS 18.4 / Core 2026.11.1. Its static/reserved address is 192.168.1.211/24, MAC BC:24:11:32:8F:61, gateway 192.168.1.1; guest OS DNS uses 192.168.1.210, 192.168.1.150 and 94.140.14.14. [Direct local HTTP access](http://192.168.1.211/) remains available when pve02/apps01/Caddy is unavailable while pve01/ha01 and LAN survive. See [Home Assistant deployment and recovery](docs/home-assistant.md).
+
+Owner setup was completed privately before LAN publication. Owner REST/WebSocket authentication, closed onboarding, stable trust of only proxy 192.168.1.58/32, both Pi-holes' 17 local records and all 11 friendly Windows HTTPS pages passed. Homarr now has 9 cards; additive repeat added 0 and retained the original 8. apps01 remains 4 GiB with 10 containers/10 active Docker volumes plus retained initial PG16 volume. Native encrypted daily 04:45 backups, archive integrity/decryption and wrong-key rejection passed. A checksum-verified encrypted copy and separate recovery secret are saved privately off-node. A graceful HAOS reboot preserved static networking, owner authentication and stable HTTPS/WebSocket settings. Actual restore and household power recovery remain untested.
+
+The following earlier descriptions/counts are retained context; this dated extension supersedes service/guest counts. There are now four permanent service guests. Router DNS remains the accepted AdGuard-first policy; no household DNS-policy change or WAN ingress was made.
+
 Proxmox automation for two standalone mini PCs, with Debian VM/LXC creation and an isolated test network.
 
 ## Current setup

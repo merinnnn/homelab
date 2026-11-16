@@ -1,3 +1,15 @@
+# Latest Home Assistant setup — 16 November 2026
+
+**Local deployment complete.** Dedicated permanent pve01 VM102 ha01 runs HAOS 18.4 / Core 2026.11.1, 2 vCPU / 4 GiB / 32 GiB, MAC BC:24:11:32:8F:61, static/reserved 192.168.1.211/24 on vmbr0, gateway 192.168.1.1. Guest OS DNS is 192.168.1.210/192.168.1.150/94.140.14.14; router reservation was saved/reopened and accepted household AdGuard-first DNS remains unchanged. Supervisor 2026.11.0 was observed.
+
+Owner admin was initialized privately on isolated vmbr1 before guarded LAN publication; onboarding is closed. Owner REST/WebSocket and stable forwarded-IP trust limited to 192.168.1.58/32 passed. https://ha.home.arpa/ uses Caddy .58 → HA .211:80; direct http://192.168.1.211/ remains independent of that proxy while pve01/ha01 and LAN survive. Both Pi-holes verify 17 desired records; all 11 friendly Windows HTTPS/default-trust/DNS pages returned HTTP 200 passed. Homarr now has 9 cards, original 8 preserved, repeat added 0. apps01 remains 4 GiB/10 containers/10 active Docker volumes plus retained PG16; existing accounts/CA/resources retained.
+
+Private pve01 root0700 `/etc/homelab/home-assistant` holds root0600 runtime/account/recovery state; private desktop services.json entry `homeAssistant` has the owner login. Native encrypted daily 04:45 Europe/London backup/export, decryption and wrong-key rejection, private off-node checksum/ACL and graceful HAOS restart persistence passed. All 30 independent live checks passed. Read [Home Assistant](home-assistant.md) for the coordinator's final measured results.
+
+No real devices/radios paired, real automation/control, WAN ingress, cross-node HA, physical power/host/router cold boot, visual browser or actual full backup restore is claimed. Existing monitoring cannot alert if its own pve02/VM/power/internet is absent. Older dated service counts/source/test outcomes below retain their original scope and are superseded by this extension where applicable.
+
+---
+
 # Latest setup — 15 November 2026
 
 n8n2.47.7 is installed at https://n8n.home.arpa/ on apps01 with PostgreSQL17.12 and matching external runners. Protected owner setup, actual JavaScript42 workflow, container recreation persistence, daily backup/recovery, initial private off-node copy, isolated synthetic encrypted restore and43 independent live checks passed. All10 friendly HTTPS pages and15 Pi-hole records passed. Homarr now has8 cards. apps01 was raised to4GiB with a guarded graceful guest restart; no physical node/router reboot or household DNS-policy change occurred.10 healthy containers,10 active volumes plus1 retained PostgreSQL16 volume; original CA/accounts/data retained. See [n8n](n8n.md), [services](services.md) and the external Knowledge15November report for source hashes, retained failures and scope.

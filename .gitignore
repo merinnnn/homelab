@@ -35,3 +35,7 @@ backups/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Python runtime bytecode
+__pycache__/
+*.py[cod]

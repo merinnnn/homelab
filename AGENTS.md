@@ -1,5 +1,13 @@
 # Homelab working instructions
 
+## Latest Home Assistant handoff — 16 November 2026
+
+Local deployment and acceptance passed. Read docs/home-assistant.md and current setup-status before mutation. Permanent pve01 VM102 ha01 joins the existing three permanent guests: 2 vCPU / 4 GiB / 32 GiB, MAC BC:24:11:32:8F:61, vmbr0 static/reserved 192.168.1.211/24, gateway 192.168.1.1, guest OS DNS 192.168.1.210 / 192.168.1.150 / 94.140.14.14. Router reservation was saved/reopened; accepted household AdGuard-first DNS is unchanged. HAOS 18.4 / Core 2026.11.1; Supervisor 2026.11.0 was observed.
+
+Private owner admin was initialized on isolated vmbr1 before LAN promotion. Onboarding closed, authenticated REST/WebSocket and stable trusted proxy 192.168.1.58/32 passed. Both Pi-holes verify 17 records; all 11 friendly Windows HTTPS/default-trust/DNS pages passed. Homarr has 9 cards, repeat added 0 and original 8 preserved. apps01 remains 10 containers / 10 active Docker volumes plus retained PG16. Friendly ha.home.arpa depends on pve02/apps01/Caddy; direct HTTP 192.168.1.211 can survive that proxy's loss while pve01/ha01/LAN survive.
+
+Preserve original HA disks/EFI, root0600 ownership manifest, private owner/auth/backup recovery material in root0700 /etc/homelab/home-assistant and private desktop services.json homeAssistant entry. Never reset/recreate/reimport VM102 or rerun host storage/network bootstrap as diagnostics. Installed `home-assistant-vm.py install 102 BC:24:11:32:8F:61 --bridge vmbr0` is a read-only ownership/configuration repeat; partial/drift/missing state refuses. Daily 04:45 encrypted backup/export, decryption/wrong-key rejection, private off-node copy/checksum/ACL and graceful HAOS restart persistence passed; 30 independent live checks passed. No full restore, physical power, visual browser, device pairing, WAN or HA failover claim. Older dated counts below are historical.
+
 Run deployments from the repository checkout at /root/homelab on the appropriate Proxmox node. Read README.md, docs/deployment.md, docs/setup-status.md and docs/networking.md first. Inspect Git status/diff and live ownership before changes; preserve existing work. Do not use personal desktop paths, embedded identities, assumed identity filenames, or generated desktop bootstrap payloads in repository scripts.
 
 Keep authorized keys, private keys, passwords, tokens and runtime account files outside Git. Scripts use standard authentication configuration or explicit public input. Private runtime files belong in /etc/homelab with root-only access. Never copy their contents into notes, logs or command arguments. The identity-free script audit is a required check.

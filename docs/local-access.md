@@ -1,5 +1,23 @@
 # Local service names and reverse proxy
 
+## Current extension — 16 November 2026, verified local deployment
+
+Home Assistant adds a fourth permanent static/reserved guest and the eleventh HTTPS site. The earlier three-guest migration examples and dated counts below are historical; do not apply the Debian static-network helper to HAOS.
+
+| Resource | Owning node / ID | Static address | MAC |
+| --- | --- | --- | --- |
+| ha01 | pve01 VM102 |192.168.1.211/24 |BC:24:11:32:8F:61 |
+
+ha01 gateway is 192.168.1.1, guest OS DNS 192.168.1.210/192.168.1.150/94.140.14.14. Router reservation was saved and reopened. Household AdGuard-first router DNS, existing Windows NRPT and private Caddy CA are preserved. Both Pi-holes verify 17 desired local records, including `ha.home.arpa`→192.168.1.58 and direct `ha01.home.arpa`→192.168.1.211.
+
+| Friendly address | Backend |
+| --- | --- |
+| https://ha.home.arpa/ | http://192.168.1.211:80/ |
+
+All 11 friendly HTTPS pages passed normal Windows DNS/default trust. HA owner REST/WebSocket authentication and closed onboarding passed; HTTP settings are stable with forwarded-IP trust restricted to 192.168.1.58/32. HAOS 18.4 / Core 2026.11.1 uses native HTTP 80, not the usual Container 8123. See [Home Assistant](home-assistant.md); current HTTP settings use its UI/WebSocket timed-trial workflow, not old YAML-only guidance. No trust warning bypass was used.
+
+Friendly HA access depends on pve02/apps01/Caddy. If that path is unavailable while pve01/ha01 and LAN survive, use direct http://192.168.1.211/ over the trusted local network (unencrypted HTTP). Other devices still require their own local DNS/public-root trust. Homarr now has 9 cards; repeat added 0 while preserving the original 8. Encrypted backup/export, decryption/wrong-key rejection, private off-node checksum/ACL and graceful HAOS reboot persistence passed. Physical blackout/router cold boot/visual browser/full restore are not claimed.
+
 The node-local helpers preserve existing IPs while moving the three service guests from DHCP to static IPv4 configuration. Both Proxmox hosts already use static .2/.3 addresses. Reserve each guest IP/MAC on the router first so its DHCP pool cannot allocate the address to another device. This does not change the accepted AdGuard-first household DNS policy.
 
 | Resource | Owning node / ID | Static address | MAC |
